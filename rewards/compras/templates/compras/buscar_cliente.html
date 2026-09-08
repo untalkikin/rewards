@@ -1,0 +1,32 @@
+{% extends "partials/base.html" %}
+{% block title %}Buscar cliente{% endblock title %}
+
+{% block content %}
+        <div class="main-content">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div class="row justify-content-center">
+                        <div class="col-md-6 col-lg-5">
+                            <div class="card mt-4">
+                                <div class="card-body p-4">
+                                    <h5 class="card-title mb-3">Buscar cliente</h5>
+                                    <p class="text-muted">Escanea el QR del cliente o escribe su código manualmente.</p>
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.codigo.id_for_label }}">{{ form.codigo.label }}</label>
+                                            {{ form.codigo }}
+                                            {% for error in form.codigo.errors %}
+                                            <div class="text-danger small mt-1">{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">Buscar</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock content %}

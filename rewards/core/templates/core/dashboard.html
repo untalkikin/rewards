@@ -1,0 +1,38 @@
+{% extends "partials/base.html" %}
+{% load static %}
+{% block title %}Dashboard{% endblock title %}
+
+{% block content %}
+        <div class="main-content">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div class="row mb-3 pb-1">
+                        <div class="col-12">
+                            <h4 class="fs-16 mb-1">Hola, {{ request.user.get_username }}</h4>
+                            <p class="text-muted mb-0">
+                                {% if perfil %}
+                                Rol: {{ perfil.get_rol_display }}{% if perfil.sucursal %} — Sucursal: {{ perfil.sucursal.nombre }}{% endif %}
+                                {% else %}
+                                Tu cuenta todavía no tiene un perfil de rol asignado.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <p class="mb-0 text-muted">
+                                        El panel de {{ negocio.name|default:"tu negocio" }} se irá completando en las
+                                        próximas fases: cajeros y sucursales, reglas de puntos, tarjetas de lealtad,
+                                        registro de compras y canjes.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock content %}

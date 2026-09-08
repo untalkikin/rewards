@@ -1,0 +1,115 @@
+{% extends "partials/base.html" %}
+{% block title %}Reportes{% endblock title %}
+
+{% block content %}
+        <div class="main-content">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <h4 class="fs-16 mb-1">Reportes por sucursal</h4>
+                            <p class="text-muted mb-0">Compras y puntos otorgados/canjeados.</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <form method="get" class="row g-3 align-items-end">
+                                        <div class="col-auto">
+                                            <label class="form-label">Desde</label>
+                                            <input type="date" name="desde" value="{{ desde }}" class="form-control">
+                                        </div>
+                                        <div class="col-auto">
+                                            <label class="form-label">Hasta</label>
+                                            <input type="date" name="hasta" value="{{ hasta }}" class="form-control">
+                                        </div>
+                                        <div class="col-auto">
+                                            <button type="submit" class="btn btn-primary">Filtrar</button>
+                                            <a href="{% url 'core:reportes' %}" class="btn btn-light">Limpiar</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <p class="text-uppercase fw-medium text-muted mb-1">Compras</p>
+                                    <h4 class="mb-0">{{ totales.num_compras }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <p class="text-uppercase fw-medium text-muted mb-1">Monto total</p>
+                                    <h4 class="mb-0">${{ totales.monto_total }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <p class="text-uppercase fw-medium text-muted mb-1">Puntos otorgados</p>
+                                    <h4 class="mb-0 text-success">+{{ totales.puntos_otorgados }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <p class="text-uppercase fw-medium text-muted mb-1">Puntos canjeados</p>
+                                    <h4 class="mb-0 text-danger">-{{ totales.puntos_canjeados }}</h4>
+                                    <span class="text-muted small">{{ totales.num_canjes }} canjes</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th>Sucursal</th>
+                                                    <th class="text-end">Compras</th>
+                                                    <th class="text-end">Monto</th>
+                                                    <th class="text-end">Puntos otorgados</th>
+                                                    <th class="text-end">Canjes</th>
+                                                    <th class="text-end">Puntos canjeados</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for fila in filas %}
+                                                <tr>
+                                                    <td>{{ fila.sucursal.nombre }}</td>
+                                                    <td class="text-end">{{ fila.num_compras }}</td>
+                                                    <td class="text-end">${{ fila.monto_total }}</td>
+                                                    <td class="text-end text-success">+{{ fila.puntos_otorgados }}</td>
+                                                    <td class="text-end">{{ fila.num_canjes }}</td>
+                                                    <td class="text-end text-danger">-{{ fila.puntos_canjeados }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted">No hay sucursales todavía.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock content %}

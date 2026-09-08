@@ -1,0 +1,37 @@
+{% extends "partials/base.html" %}
+{% block title %}Confirmar canje{% endblock title %}
+
+{% block content %}
+        <div class="main-content">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div class="row justify-content-center">
+                        <div class="col-md-6">
+                            <div class="card mt-4">
+                                <div class="card-body p-4 text-center">
+                                    <h5 class="mb-3">Confirmar canje</h5>
+                                    <p class="mb-1">Cliente: <strong>{{ costumer.nombre }}</strong></p>
+                                    <p class="mb-1">Saldo actual: <strong>{{ tarjeta.saldo }}</strong> puntos</p>
+                                    {% if regla %}
+                                    <p class="mb-4">Premio: <strong>{{ regla.descripcion_premio }}</strong> (requiere {{ regla.meta_puntos }} puntos)</p>
+                                    <div class="alert alert-warning">
+                                        Al confirmar se consumen los <strong>{{ tarjeta.saldo }}</strong> puntos y el saldo
+                                        vuelve a 0. Esta acción no se puede deshacer.
+                                    </div>
+                                    <form method="post" class="d-flex gap-2 justify-content-center">
+                                        {% csrf_token %}
+                                        <a href="{% url 'compras:cliente_detail' costumer.card_code %}" class="btn btn-light">Cancelar</a>
+                                        <button type="submit" class="btn btn-success">Confirmar canje</button>
+                                    </form>
+                                    {% else %}
+                                    <p class="text-danger">No hay una regla de puntos activa.</p>
+                                    <a href="{% url 'compras:cliente_detail' costumer.card_code %}" class="btn btn-light">Volver</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock content %}

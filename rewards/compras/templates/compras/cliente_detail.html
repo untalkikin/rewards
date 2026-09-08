@@ -1,0 +1,87 @@
+{% extends "partials/base.html" %}
+{% block title %}{{ costumer.nombre }}{% endblock title %}
+
+{% block content %}
+        <div class="main-content">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-lg-5">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title mb-1">{{ costumer.nombre }}</h5>
+                                    <p class="text-muted mb-3">{{ costumer.telefono }}{% if costumer.email %} · {{ costumer.email }}{% endif %}</p>
+                                    <h2 class="text-primary mb-0">{{ tarjeta.saldo }}</h2>
+                                    <p class="text-muted">puntos actuales</p>
+                                    {% if regla %}
+                                    <p class="text-muted small mb-0">Meta: {{ regla.meta_puntos }} pts &mdash; {{ regla.descripcion_premio }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if puede_canjear %}
+                            <div class="card mt-3 border-success">
+                                <div class="card-body">
+                                    <h6 class="mb-2">¡Alcanzó la meta!</h6>
+                                    <p class="text-muted mb-3">Puede canjear por: <strong>{{ regla.descripcion_premio }}</strong></p>
+                                    <a href="{% url 'compras:canje_confirm' costumer.card_code %}" class="btn btn-success w-100">Efectuar canje</a>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <div class="card mt-3">
+                                <div class="card-body">
+                                    <h6 class="mb-3">Registrar compra</h6>
+                                    {% for error in form.non_field_errors %}
+                                    <div class="alert alert-danger">{{ error }}</div>
+                                    {% endfor %}
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.monto.id_for_label }}">{{ form.monto.label }}</label>
+                                            {{ form.monto }}
+                                            {% for error in form.monto.errors %}
+                                            <div class="text-danger small mt-1">{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.referencia.id_for_label }}">{{ form.referencia.label }}</label>
+                                            {{ form.referencia }}
+                                        </div>
+                                        <button type="submit" class="btn btn-success w-100">Registrar compra</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-7">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="mb-3">Historial reciente</h6>
+                                    {% if historial %}
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-borderless mb-0">
+                                            <tbody>
+                                                {% for mov in historial %}
+                                                <tr>
+                                                    <td class="text-muted">{{ mov.fecha|date:"d M Y, H:i" }}</td>
+                                                    <td>{{ mov.get_tipo_display }}</td>
+                                                    <td class="text-end {% if mov.puntos < 0 %}text-danger{% else %}text-success{% endif %}">
+                                                        {{ mov.puntos|stringformat:"+d" }}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted mb-0">Sin movimientos todavía.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock content %}

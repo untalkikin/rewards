@@ -42,6 +42,10 @@ INSTALLED_APPS = [
     'stores',
     'locations',
     'bases',
+    'cuentas',
+    'lealtad',
+    'compras',
+    'core',
 ]
 
 MIDDLEWARE = [
@@ -50,6 +54,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_userforeignkey.middleware.UserForeignKeyMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -66,6 +71,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'stores.context_processors.negocio',
             ],
         },
     },
@@ -120,8 +126,36 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Auth
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'core:dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+
+# --- Wallets (Apple / Google) ---
+# Si faltan credenciales, el WalletProvider correspondiente se reporta
+# como no configurado: los botones se ocultan y los endpoints devuelven
+# un aviso en vez de romper la app. Ver NUEVAS_DEPENDENCIAS.md / README.
+
+# Apple Wallet: requiere cuenta de desarrollador Apple con Pass Type ID.
+APPLE_WALLET_TEAM_ID = os.environ.get('APPLE_WALLET_TEAM_ID', '')
+APPLE_WALLET_PASS_TYPE_ID = os.environ.get('APPLE_WALLET_PASS_TYPE_ID', '')
+APPLE_WALLET_CERTIFICATE_PATH = os.environ.get('APPLE_WALLET_CERTIFICATE_PATH', '')
+APPLE_WALLET_KEY_PATH = os.environ.get('APPLE_WALLET_KEY_PATH', '')
+APPLE_WALLET_KEY_PASSWORD = os.environ.get('APPLE_WALLET_KEY_PASSWORD', '')
+APPLE_WALLET_WWDR_PATH = os.environ.get('APPLE_WALLET_WWDR_PATH', '')
+
+# Google Wallet: requiere cuenta de servicio de Google Cloud con acceso
+# a la Google Wallet API, y un Issuer ID (developers.google.com/wallet).
+GOOGLE_WALLET_ISSUER_ID = os.environ.get('GOOGLE_WALLET_ISSUER_ID', '')
+GOOGLE_WALLET_SERVICE_ACCOUNT_FILE = os.environ.get('GOOGLE_WALLET_SERVICE_ACCOUNT_FILE', '')
+GOOGLE_WALLET_CLASS_SUFFIX = os.environ.get('GOOGLE_WALLET_CLASS_SUFFIX', 'rewards_loyalty_class')
