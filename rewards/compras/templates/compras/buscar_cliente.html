@@ -11,7 +11,17 @@
                                 <div class="card-body p-4">
                                     <h5 class="card-title mb-3">Buscar cliente</h5>
                                     <p class="text-muted">Escanea el QR del cliente o escribe su código manualmente.</p>
-                                    <form method="post">
+
+                                    <button type="button" id="btn-escanear" class="btn btn-outline-primary w-100 mb-2">
+                                        <i class="ri-qr-scan-2-line align-middle me-1"></i> Escanear QR con la cámara
+                                    </button>
+                                    <button type="button" id="btn-detener-escaneo" class="btn btn-outline-danger w-100 mb-2 d-none">
+                                        Detener cámara
+                                    </button>
+                                    <div id="qr-reader" class="mb-3 d-none"></div>
+                                    <div id="qr-error" class="text-danger small mb-2"></div>
+
+                                    <form method="post" id="form-buscar-cliente">
                                         {% csrf_token %}
                                         <div class="mb-3">
                                             <label class="form-label" for="{{ form.codigo.id_for_label }}">{{ form.codigo.label }}</label>
@@ -30,3 +40,77 @@
             </div>
         </div>
 {% endblock content %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+    (function () {
+        const btnEscanear = document.getElementById("btn-escanear");
+        const btnDetener = document.getElementById("btn-detener-escaneo");
+        const readerDiv = document.getElementById("qr-reader");
+        const errorDiv = document.getElementById("qr-error");
+        const codigoInput = document.getElementById("{{ form.codigo.id_for_label }}");
+        const form = document.getElementById("form-buscar-cliente");
+        let html5QrCode = null;
+
+        function extraerCodigo(texto) {
+            // El QR de la tarjeta codifica la URL completa del panel del
+            // cliente (/tarjeta/<codigo>/); si no es una URL, se asume que
+            // el texto ya es el código.
+            try {
+                const url = new URL(texto);
+                const partes = url.pathname.split("/").filter(Boolean);
+                const idx = partes.indexOf("tarjeta");
+                if (idx !== -1 && partes[idx + 1]) {
+                    return decodeURIComponent(partes[idx + 1]);
+                }
+            } catch (e) {
+                // No es una URL válida, se usa el texto tal cual.
+            }
+            return texto.trim();
+        }
+
+        async function detenerEscaneo() {
+            if (html5QrCode) {
+                try {
+                    await html5QrCode.stop();
+                    html5QrCode.clear();
+                } catch (e) {
+                    // La cámara ya pudo haberse detenido.
+                }
+            }
+            readerDiv.classList.add("d-none");
+            btnDetener.classList.add("d-none");
+            btnEscanear.classList.remove("d-none");
+        }
+
+        async function onScanSuccess(decodedText) {
+            await detenerEscaneo();
+            codigoInput.value = extraerCodigo(decodedText);
+            form.submit();
+        }
+
+        async function iniciarEscaneo() {
+            errorDiv.textContent = "";
+            readerDiv.classList.remove("d-none");
+            btnEscanear.classList.add("d-none");
+            html5QrCode = new Html5Qrcode("qr-reader");
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: 250 },
+                    onScanSuccess,
+                );
+                btnDetener.classList.remove("d-none");
+            } catch (err) {
+                errorDiv.textContent = "No se pudo acceder a la cámara: " + err;
+                readerDiv.classList.add("d-none");
+                btnEscanear.classList.remove("d-none");
+            }
+        }
+
+        btnEscanear.addEventListener("click", iniciarEscaneo);
+        btnDetener.addEventListener("click", detenerEscaneo);
+    })();
+</script>
+{% endblock extra_js %}

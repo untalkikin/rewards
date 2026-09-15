@@ -80,9 +80,16 @@
                             <div class="dropdown-menu dropdown-menu-end">
                                 <h6 class="dropdown-header">Hola, {{ request.user.get_username }}</h6>
                                 <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="{% url 'logout' %}"><i
-                                        class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span
-                                        class="align-middle">Cerrar sesión</span></a>
+                                <a class="dropdown-item" href="{% url 'cuentas:cambiar_password' %}"><i
+                                        class="mdi mdi-lock-reset text-muted fs-16 align-middle me-1"></i> <span
+                                        class="align-middle">Cambiar contraseña</span></a>
+                                <div class="dropdown-divider"></div>
+                                <form method="post" action="{% url 'logout' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item"><i
+                                            class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i> <span
+                                            class="align-middle">Cerrar sesión</span></button>
+                                </form>
                             </div>
                         </div>
 

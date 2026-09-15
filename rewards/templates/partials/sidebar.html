@@ -59,6 +59,13 @@
                             </a>
                         </li>
                         {% endif %}
+                        {% if request.user.perfil.activo %}
+                        <li class="nav-item">
+                            <a href="{% url 'costumers:registrar' %}" class="nav-link menu-link">
+                                <i data-feather="user-plus" class="icon-dual"></i> <span>Registrar cliente</span>
+                            </a>
+                        </li>
+                        {% endif %}
                         {% if request.user.perfil.rol == "DUENO" %}
                         <li class="nav-item">
                             <a href="{% url 'core:reportes' %}" class="nav-link menu-link">

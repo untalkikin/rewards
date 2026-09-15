@@ -17,3 +17,13 @@ class DuenoRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     def test_func(self):
         perfil = getattr(self.request.user, "perfil", None)
         return bool(perfil and perfil.rol == Rol.DUENO and perfil.activo)
+
+
+class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Restringe la vista a cualquier usuario con Perfil activo (cajero o
+    dueño) -- para acciones que ambos roles pueden hacer, como registrar
+    clientes."""
+
+    def test_func(self):
+        perfil = getattr(self.request.user, "perfil", None)
+        return bool(perfil and perfil.activo)
