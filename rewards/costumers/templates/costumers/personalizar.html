@@ -1,0 +1,169 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg">
+<head>
+    <meta charset="utf-8" />
+    <title>Personalizar mi tarjeta | {{ negocio.name|default:"Rewards" }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if negocio.favicon %}
+    <link rel="shortcut icon" href="{{ negocio.favicon.url }}">
+    {% else %}
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico'%}">
+    {% endif %}
+
+    <script src="{% static 'js/layout.js'%}"></script>
+    <link href="{% static 'css/bootstrap.min.css'%}" id="bootstrap-style" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/icons.min.css'%}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/app.min.css'%}" id="app-style" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/custom.min.css'%}" id="app-style" rel="stylesheet" type="text/css" />
+    <style>
+        .opcion-fondo { cursor: pointer; }
+        .opcion-fondo input { position: absolute; opacity: 0; pointer-events: none; }
+        .opcion-fondo .swatch {
+            width: 36px; height: 36px; border-radius: 50%;
+            border: 2px solid var(--vz-border-color);
+        }
+        .opcion-fondo input:checked ~ .swatch {
+            border-color: var(--vz-primary);
+            box-shadow: 0 0 0 2px var(--vz-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-page-wrapper pt-5">
+        <div class="auth-one-bg-position auth-one-bg" id="auth-particles">
+            <div class="bg-overlay"></div>
+        </div>
+
+        <div class="auth-page-content">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="text-center mt-sm-4 mb-4 text-white-50">
+                            <h4 class="text-white">Personalizar mi tarjeta</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row justify-content-center">
+                    <div class="col-md-8 col-lg-6 col-xl-5">
+                        <div id="vista-previa">
+                            {% include "partials/tarjeta_visual.html" %}
+                        </div>
+
+                        <div class="card">
+                            <div class="card-body p-4">
+                                {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                                </div>
+                                {% endif %}
+
+                                <form method="post" id="form-personalizar" enctype="multipart/form-data">
+                                    {% csrf_token %}
+
+                                    <label class="form-label d-block mb-2">Fondo de la tarjeta</label>
+                                    <div class="d-flex flex-wrap gap-3 mb-3">
+                                        <label class="opcion-fondo text-center" style="width: 64px;">
+                                            <input type="radio" name="estilo_fondo" value=""
+                                                   {% if form.estilo_fondo.value == "" or not form.estilo_fondo.value %}checked{% endif %}
+                                                   data-css="{{ negocio.color_primario|default:'#405189' }}">
+                                            <span class="swatch d-inline-block" style="background: {{ negocio.color_primario|default:'#405189' }};"></span>
+                                            <div class="fs-11 text-muted mt-1">Marca</div>
+                                        </label>
+
+                                        {% for clave, estilo in estilos_fondo.items %}
+                                        <label class="opcion-fondo text-center" style="width: 64px;">
+                                            <input type="radio" name="estilo_fondo" value="{{ clave }}"
+                                                   {% if form.estilo_fondo.value == clave %}checked{% endif %}
+                                                   data-css="{{ estilo.css }}">
+                                            <span class="swatch d-inline-block" style="background: {{ estilo.css }};"></span>
+                                            <div class="fs-11 text-muted mt-1">{{ estilo.label }}</div>
+                                        </label>
+                                        {% endfor %}
+
+                                        <label class="opcion-fondo text-center" style="width: 64px;">
+                                            <input type="radio" name="estilo_fondo" value="personalizado" id="opcion-personalizado"
+                                                   {% if form.estilo_fondo.value == "personalizado" %}checked{% endif %}
+                                                   data-css="">
+                                            <span class="swatch d-inline-block d-flex align-items-center justify-content-center" style="background: repeating-conic-gradient(#e9ecef 0% 25%, #fff 0% 50%) 50% / 12px 12px;">
+                                                <i class="ri-palette-line"></i>
+                                            </span>
+                                            <div class="fs-11 text-muted mt-1">Propio</div>
+                                        </label>
+                                    </div>
+
+                                    <div id="campo-color-personalizado" class="mb-3">
+                                        <label class="form-label" for="{{ form.color_fondo.id_for_label }}">{{ form.color_fondo.label }}</label>
+                                        {{ form.color_fondo }}
+                                        {% for error in form.color_fondo.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                    </div>
+
+                                    {% if promocion.tipo_mecanica == "VISITA" %}
+                                    <hr>
+                                    <label class="form-label d-block mb-1" for="{{ form.sello_imagen.id_for_label }}">Ícono de tus sellos (opcional)</label>
+                                    <p class="text-muted small mb-2">Marca cada visita en tu tarjeta. Si no subes uno, se usa una estrella.</p>
+                                    {% if tarjeta.sello_imagen %}
+                                    <img src="{{ tarjeta.sello_imagen.url }}" alt="" width="40" height="40" class="rounded border p-1 mb-2">
+                                    {% endif %}
+                                    {{ form.sello_imagen }}
+                                    {% for error in form.sello_imagen.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                    <div class="mb-3"></div>
+                                    {% endif %}
+
+                                    <div class="d-flex gap-2">
+                                        <a href="{% url 'costumers:mi_cuenta' %}" class="btn btn-light w-100">Cancelar</a>
+                                        <button type="submit" class="btn btn-primary w-100">Guardar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'libs/bootstrap/dist/js/bootstrap.bundle.min.js'%}"></script>
+    <script src="{% static 'libs/simplebar/dist/simplebar.min.js'%}"></script>
+    <script src="{% static 'libs/node-waves/dist/waves.min.js'%}"></script>
+    <script src="{% static 'js/plugins.js'%}"></script>
+    <script>
+        (function () {
+            const radios = document.querySelectorAll('input[name="estilo_fondo"]');
+            const preview = document.getElementById("vista-previa").firstElementChild;
+            const campoColor = document.getElementById("campo-color-personalizado");
+            const inputColor = document.getElementById("{{ form.color_fondo.id_for_label }}");
+            const colorMarca = "{{ negocio.color_primario|default:'#405189' }}";
+
+            function actualizarPreview() {
+                const seleccionado = document.querySelector('input[name="estilo_fondo"]:checked');
+                if (!seleccionado) return;
+                const esPersonalizado = seleccionado.value === "personalizado";
+                campoColor.classList.toggle("d-none", !esPersonalizado);
+                const css = esPersonalizado ? (inputColor.value || colorMarca) : seleccionado.dataset.css;
+                preview.style.background = css;
+            }
+
+            radios.forEach((radio) => radio.addEventListener("change", actualizarPreview));
+            inputColor.addEventListener("input", actualizarPreview);
+            actualizarPreview();
+
+            const inputSello = document.getElementById("{{ form.sello_imagen.id_for_label }}");
+            if (inputSello) {
+                inputSello.addEventListener("change", () => {
+                    const archivo = inputSello.files[0];
+                    if (!archivo) return;
+                    const lector = new FileReader();
+                    lector.onload = (evento) => {
+                        document.querySelectorAll(".js-sello-llena").forEach((slot) => {
+                            slot.innerHTML = `<img src="${evento.target.result}" alt="" style="width:22px;height:22px;object-fit:contain;">`;
+                        });
+                    };
+                    lector.readAsDataURL(archivo);
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -4,16 +4,13 @@ from django.views import View
 
 from costumers.models import Costumer
 from cuentas.mixins import CajeroRequiredMixin
-from lealtad.services.canje_service import (
-    SaldoInsuficiente,
-    SinReglaPuntosVigente,
-    efectuar_canje,
-)
-from lealtad.services.reglas_service import regla_vigente
+from lealtad.models import TipoMecanica
+from lealtad.services.acumulacion_service import registrar_evento
+from lealtad.services.canje_service import SaldoInsuficiente, efectuar_canje
+from lealtad.services.exceptions import RestriccionNoCumplida, SinPromocionVigente
+from lealtad.services.promociones_service import casillas_de, promocion_vigente
 
 from .forms import BuscarClienteForm, RegistrarCompraForm
-from .services.compra_service import registrar_compra
-from .services.compra_service import SinReglaPuntosVigente as SinReglaCompra
 
 
 class BuscarClienteView(CajeroRequiredMixin, View):
@@ -38,19 +35,32 @@ class ClienteCajeroView(CajeroRequiredMixin, View):
     def get(self, request, codigo):
         costumer = get_object_or_404(Costumer, card_code=codigo)
         context = self._context(costumer, request.user.perfil)
-        context["form"] = RegistrarCompraForm()
+        if context["promocion"] and context["promocion"].tipo_mecanica == TipoMecanica.MONTO:
+            context["form"] = RegistrarCompraForm()
         return render(request, self.template_name, context)
 
     def post(self, request, codigo):
         costumer = get_object_or_404(Costumer, card_code=codigo)
-        form = RegistrarCompraForm(request.POST)
         perfil = request.user.perfil
 
         if not perfil.sucursal:
-            form.add_error(None, "Tu usuario de cajero no tiene una sucursal asignada.")
-        elif form.is_valid():
+            messages.error(request, "Tu usuario de cajero no tiene una sucursal asignada.")
+            return redirect("compras:cliente_detail", codigo=codigo)
+
+        promocion = promocion_vigente(perfil.sucursal.store)
+
+        if promocion and promocion.tipo_mecanica == TipoMecanica.VISITA:
             try:
-                registrar_compra(
+                registrar_evento(costumer=costumer, sucursal=perfil.sucursal, cajero=request.user)
+                messages.success(request, "Visita registrada. Saldo actualizado.")
+            except (SinPromocionVigente, RestriccionNoCumplida) as exc:
+                messages.error(request, str(exc))
+            return redirect("compras:cliente_detail", codigo=codigo)
+
+        form = RegistrarCompraForm(request.POST)
+        if form.is_valid():
+            try:
+                registrar_evento(
                     costumer=costumer,
                     sucursal=perfil.sucursal,
                     cajero=request.user,
@@ -59,7 +69,7 @@ class ClienteCajeroView(CajeroRequiredMixin, View):
                 )
                 messages.success(request, "Compra registrada. Saldo actualizado.")
                 return redirect("compras:cliente_detail", codigo=codigo)
-            except SinReglaCompra as exc:
+            except (SinPromocionVigente, RestriccionNoCumplida) as exc:
                 form.add_error(None, str(exc))
 
         context = self._context(costumer, perfil)
@@ -68,14 +78,15 @@ class ClienteCajeroView(CajeroRequiredMixin, View):
 
     def _context(self, costumer, perfil):
         tarjeta = costumer.tarjeta
-        regla = regla_vigente(perfil.sucursal.store) if perfil.sucursal else None
-        puede_canjear = bool(regla and tarjeta.saldo >= regla.meta_puntos)
+        promocion = promocion_vigente(perfil.sucursal.store) if perfil.sucursal else None
+        puede_canjear = bool(promocion and tarjeta.saldo >= promocion.meta_puntos)
         return {
             "costumer": costumer,
             "tarjeta": tarjeta,
             "historial": tarjeta.movimientos.all()[:10],
-            "regla": regla,
+            "promocion": promocion,
             "puede_canjear": puede_canjear,
+            "casillas": casillas_de(tarjeta, promocion),
         }
 
 
@@ -86,11 +97,11 @@ class CanjeConfirmView(CajeroRequiredMixin, View):
         costumer = get_object_or_404(Costumer, card_code=codigo)
         tarjeta = costumer.tarjeta
         perfil = request.user.perfil
-        regla = regla_vigente(perfil.sucursal.store) if perfil.sucursal else None
+        promocion = promocion_vigente(perfil.sucursal.store) if perfil.sucursal else None
         return render(request, self.template_name, {
             "costumer": costumer,
             "tarjeta": tarjeta,
-            "regla": regla,
+            "promocion": promocion,
         })
 
     def post(self, request, codigo):
@@ -109,7 +120,7 @@ class CanjeConfirmView(CajeroRequiredMixin, View):
                     request,
                     f"Canje registrado: {canje.premio}. El saldo se reinició a 0.",
                 )
-            except (SinReglaPuntosVigente, SaldoInsuficiente) as exc:
+            except (SinPromocionVigente, SaldoInsuficiente) as exc:
                 messages.error(request, str(exc))
 
         return redirect("compras:cliente_detail", codigo=codigo)

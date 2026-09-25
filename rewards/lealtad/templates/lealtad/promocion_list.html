@@ -1,0 +1,87 @@
+{% extends "partials/base.html" %}
+{% block title %}Promociones{% endblock title %}
+
+{% block content %}
+        <div class="main-content">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div class="row mb-3">
+                        <div class="col-12 d-flex justify-content-between align-items-center">
+                            <h4 class="fs-16 mb-0">Promociones</h4>
+                            <a href="{% url 'lealtad:promocion_create' %}" class="btn btn-primary">
+                                <i class="ri-add-line align-middle me-1"></i> Nueva promoción
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    {% if promociones %}
+                                    <div class="table-responsive">
+                                        <table class="table table-nowrap align-middle mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nombre</th>
+                                                    <th>Mecánica</th>
+                                                    <th>Puntos</th>
+                                                    <th>Meta</th>
+                                                    <th>Premio</th>
+                                                    <th>Restricción</th>
+                                                    <th>Estado</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for promocion in promociones %}
+                                                <tr>
+                                                    <td>{{ promocion.nombre }}</td>
+                                                    <td>
+                                                        {% if promocion.tipo_mecanica == "VISITA" %}
+                                                        <span class="badge bg-info-subtle text-info">Por visita</span>
+                                                        {% else %}
+                                                        <span class="badge bg-primary-subtle text-primary">Por monto (${{ promocion.monto_base }})</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ promocion.puntos_otorgados }}</td>
+                                                    <td>{{ promocion.meta_puntos }}</td>
+                                                    <td>{{ promocion.descripcion_premio }}</td>
+                                                    <td>
+                                                        {% if promocion.restriccion %}
+                                                        Máx. {{ promocion.restriccion.max_escaneos_dia }}/día ({{ promocion.restriccion.get_alcance_display }})
+                                                        {% else %}
+                                                        <span class="text-muted">Sin límite</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if promocion.activa %}
+                                                        <span class="badge bg-success">Activa</span>
+                                                        {% else %}
+                                                        <span class="badge bg-secondary-subtle text-secondary">Inactiva</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if not promocion.activa %}
+                                                        <form method="post" action="{% url 'lealtad:promocion_activar' promocion.pk %}">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-sm btn-outline-success">Activar</button>
+                                                        </form>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted mb-0">Todavía no hay promociones creadas.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock content %}

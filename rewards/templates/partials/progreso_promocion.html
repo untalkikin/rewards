@@ -1,0 +1,21 @@
+{% if promocion %}
+    {% if promocion.tipo_mecanica == "VISITA" %}
+    <p class="text-muted small text-center mb-0">
+        Premio: <strong>{{ promocion.descripcion_premio }}</strong>
+        &mdash; {{ tarjeta.saldo }} / {{ promocion.meta_puntos }} visitas
+    </p>
+    {% else %}
+    <div class="mb-2">
+        <p class="mb-1 text-muted">
+            Progreso hacia: <strong>{{ promocion.descripcion_premio }}</strong>
+            <span class="float-end">{{ tarjeta.saldo }} / {{ promocion.meta_puntos }}</span>
+        </p>
+        <div class="progress" style="height: 8px;">
+            <div class="progress-bar bg-success" role="progressbar"
+                 style="width: {{ progreso }}%"
+                 aria-valuenow="{{ progreso }}" aria-valuemin="0" aria-valuemax="100">
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endif %}

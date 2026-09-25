@@ -1,33 +1,28 @@
 from django.db import transaction
 
-from ..models import Canje, MovimientoPuntos, ReglaPuntos, TipoMovimiento
+from ..models import Canje, MovimientoPuntos, Promocion, TipoMovimiento
+from .exceptions import SaldoInsuficiente, SinPromocionVigente
 
-
-class SinReglaPuntosVigente(Exception):
-    """No hay una ReglaPuntos activa para el negocio de la sucursal."""
-
-
-class SaldoInsuficiente(Exception):
-    """El saldo de la tarjeta no alcanza la meta de la regla vigente."""
+__all__ = ["SinPromocionVigente", "SaldoInsuficiente", "efectuar_canje"]
 
 
 @transaction.atomic
 def efectuar_canje(*, tarjeta, sucursal, cajero):
-    regla = (
-        ReglaPuntos.objects.select_for_update()
+    promocion = (
+        Promocion.objects.select_for_update()
         .filter(store=sucursal.store, activa=True)
         .order_by("-vigente_desde")
         .first()
     )
-    if regla is None:
-        raise SinReglaPuntosVigente(
-            "El negocio no tiene una regla de puntos activa configurada."
+    if promocion is None:
+        raise SinPromocionVigente(
+            "El negocio no tiene una promoción activa configurada."
         )
 
     saldo = tarjeta.saldo
-    if saldo < regla.meta_puntos:
+    if saldo < promocion.meta_puntos:
         raise SaldoInsuficiente(
-            f"El cliente tiene {saldo} puntos; se necesitan {regla.meta_puntos}."
+            f"El cliente tiene {saldo} puntos; se necesitan {promocion.meta_puntos}."
         )
 
     # Reset a cero: se consume TODO el saldo actual, no solo la meta.
@@ -36,7 +31,7 @@ def efectuar_canje(*, tarjeta, sucursal, cajero):
         sucursal=sucursal,
         cajero=cajero,
         puntos_consumidos=saldo,
-        premio=regla.descripcion_premio,
+        premio=promocion.descripcion_premio,
     )
     MovimientoPuntos.objects.create(
         tarjeta=tarjeta,

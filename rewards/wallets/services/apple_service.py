@@ -23,18 +23,18 @@ class AppleWalletProvider(WalletProvider):
         )
 
     def generar_pase(self, tarjeta, request) -> PaseResult:
-        from lealtad.services.reglas_service import regla_vigente
+        from lealtad.services.promociones_service import promocion_vigente
         from stores.models import Store
 
         negocio = Store.objects.first()
-        regla = regla_vigente(negocio)
+        promocion = promocion_vigente(negocio)
         nombre_negocio = negocio.name if negocio else "Rewards"
 
         card = StoreCard()
         card.addPrimaryField("balance", str(tarjeta.saldo), "Puntos")
-        if regla:
-            card.addSecondaryField("meta", str(regla.meta_puntos), "Meta")
-            card.addSecondaryField("premio", regla.descripcion_premio, "Premio")
+        if promocion:
+            card.addSecondaryField("meta", str(promocion.meta_puntos), "Meta")
+            card.addSecondaryField("premio", promocion.descripcion_premio, "Premio")
         card.addAuxiliaryField("cliente", tarjeta.costumer.nombre, "Cliente")
 
         passfile = Pass(
@@ -45,8 +45,12 @@ class AppleWalletProvider(WalletProvider):
         )
         passfile.serialNumber = tarjeta.codigo
         passfile.description = f"Tarjeta de lealtad - {nombre_negocio}"
-        if negocio and negocio.color_primario:
-            passfile.backgroundColor = _hex_to_rgb_css(negocio.color_primario)
+        # Apple Wallet solo soporta un color plano (nada de degradados): si
+        # el cliente personalizó su tarjeta, fondo_solido ya trae el color
+        # sólido equivalente al estilo elegido.
+        color_fondo = tarjeta.fondo_solido or (negocio.color_primario if negocio else None)
+        if color_fondo:
+            passfile.backgroundColor = _hex_to_rgb_css(color_fondo)
 
         url = request.build_absolute_uri(
             reverse("lealtad:tarjeta_detail", args=[tarjeta.codigo])

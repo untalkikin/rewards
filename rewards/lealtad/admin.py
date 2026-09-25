@@ -1,14 +1,21 @@
 from django.contrib import admin
-from .models import Canje, MovimientoPuntos, ReglaPuntos, TarjetaLealtad
+from .models import Canje, MovimientoPuntos, Promocion, RestriccionPromocion, TarjetaLealtad, Visita
 
 
-@admin.register(ReglaPuntos)
-class ReglaPuntosAdmin(admin.ModelAdmin):
+class RestriccionPromocionInline(admin.StackedInline):
+    model = RestriccionPromocion
+    extra = 0
+    max_num = 1
+
+
+@admin.register(Promocion)
+class PromocionAdmin(admin.ModelAdmin):
     list_display = (
-        "nombre", "store", "monto_base", "puntos_otorgados",
+        "nombre", "store", "tipo_mecanica", "puntos_otorgados",
         "meta_puntos", "vigente_desde", "vigente_hasta", "activa",
     )
-    list_filter = ("store", "activa")
+    list_filter = ("store", "tipo_mecanica", "activa")
+    inlines = [RestriccionPromocionInline]
 
 
 class MovimientoPuntosInline(admin.TabularInline):
@@ -32,6 +39,16 @@ class TarjetaLealtadAdmin(admin.ModelAdmin):
 class MovimientoPuntosAdmin(admin.ModelAdmin):
     list_display = ("tarjeta", "tipo", "puntos", "fecha")
     list_filter = ("tipo",)
+
+
+@admin.register(Visita)
+class VisitaAdmin(admin.ModelAdmin):
+    list_display = ("tarjeta", "sucursal", "cajero", "puntos_otorgados", "fecha")
+    list_filter = ("sucursal", "fecha")
+    readonly_fields = ("tarjeta", "sucursal", "cajero", "puntos_otorgados", "fecha")
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(Canje)

@@ -22,11 +22,11 @@ class GoogleWalletProvider(WalletProvider):
         )
 
     def generar_pase(self, tarjeta, request) -> PaseResult:
-        from lealtad.services.reglas_service import regla_vigente
+        from lealtad.services.promociones_service import promocion_vigente
         from stores.models import Store
 
         negocio = Store.objects.first()
-        regla = regla_vigente(negocio)
+        promocion = promocion_vigente(negocio)
         nombre_negocio = negocio.name if negocio else "Rewards"
 
         client_email, private_key = _credenciales()
@@ -41,8 +41,8 @@ class GoogleWalletProvider(WalletProvider):
         }
 
         label_puntos = "Puntos"
-        if regla and regla.meta_puntos:
-            label_puntos = f"Puntos (meta {regla.meta_puntos})"
+        if promocion and promocion.meta_puntos:
+            label_puntos = f"Puntos (meta {promocion.meta_puntos})"
 
         loyalty_object = {
             "id": object_id,
@@ -61,6 +61,12 @@ class GoogleWalletProvider(WalletProvider):
                 ),
             },
         }
+        # Igual que en Apple Wallet, Google Wallet solo admite un color
+        # plano; fondo_solido ya trae el equivalente sólido si el cliente
+        # personalizó su tarjeta con un estilo con degradado.
+        color_fondo = tarjeta.fondo_solido or (negocio.color_primario if negocio else None)
+        if color_fondo:
+            loyalty_object["hexBackgroundColor"] = color_fondo
 
         payload = {
             "iss": client_email,

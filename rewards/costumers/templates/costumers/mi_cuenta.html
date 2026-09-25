@@ -40,38 +40,32 @@
                     <div class="col-md-8 col-lg-6 col-xl-5">
                         <div class="card mt-4">
                             <div class="card-body p-4">
-                                <div class="d-flex justify-content-end">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <a href="{% url 'costumers:personalizar' %}" class="text-muted small">
+                                        <i class="ri-palette-line align-middle me-1"></i>Personalizar
+                                    </a>
                                     <a href="{% url 'costumers:logout' %}" class="text-muted small">
                                         <i class="ri-logout-box-line align-middle me-1"></i>Cerrar sesión
                                     </a>
                                 </div>
-                                <div class="text-center">
-                                    <h5 class="mb-1">{{ costumer.nombre }}</h5>
-                                    <p class="text-muted mb-3">Tarjeta de lealtad</p>
-                                    <img src="{% url 'lealtad:tarjeta_qr' tarjeta.codigo %}" alt="Código QR" width="180" height="180" class="mb-3">
-                                    <p class="text-muted fs-12">{{ tarjeta.codigo }}</p>
-                                </div>
 
-                                <div class="text-center my-4">
-                                    <h1 class="display-5 fw-semibold text-primary mb-0">{{ tarjeta.saldo }}</h1>
-                                    <p class="text-muted">puntos acumulados</p>
-                                </div>
+                                {% include "partials/tarjeta_visual.html" %}
 
-                                {% if regla %}
-                                <div class="mb-2">
-                                    <p class="mb-1 text-muted">
-                                        Progreso hacia: <strong>{{ regla.descripcion_premio }}</strong>
-                                        <span class="float-end">{{ tarjeta.saldo }} / {{ regla.meta_puntos }}</span>
-                                    </p>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-success" role="progressbar"
-                                             style="width: {{ progreso }}%"
-                                             aria-valuenow="{{ progreso }}" aria-valuemin="0" aria-valuemax="100">
-                                        </div>
-                                    </div>
+                                {% include "partials/progreso_promocion.html" %}
+
+                                {% if apple_wallet_disponible or google_wallet_disponible %}
+                                <div class="d-flex flex-column gap-2 mt-3">
+                                    {% if apple_wallet_disponible %}
+                                    <a href="{% url 'lealtad:tarjeta_apple' tarjeta.codigo %}" class="btn btn-dark">
+                                        <i class="ri-apple-fill align-middle me-1"></i> Añadir a Apple Wallet
+                                    </a>
+                                    {% endif %}
+                                    {% if google_wallet_disponible %}
+                                    <a href="{% url 'lealtad:tarjeta_google' tarjeta.codigo %}" class="btn btn-outline-secondary">
+                                        <i class="ri-google-fill align-middle me-1"></i> Guardar en Google Wallet
+                                    </a>
+                                    {% endif %}
                                 </div>
-                                {% else %}
-                                <p class="text-muted text-center">Este negocio todavía no tiene una regla de puntos configurada.</p>
                                 {% endif %}
                             </div>
                         </div>

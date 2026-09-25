@@ -6,9 +6,11 @@ from locations.models import Sucursal
 
 
 class Compra(models.Model):
-    """Registro inmutable de una compra. Los puntos que otorgó ya quedan
-    fijos aquí con la ReglaPuntos vigente al momento; no se recalculan
-    después aunque la regla cambie."""
+    """Registro inmutable de una compra. Solo existe cuando la promoción
+    vigente es de tipo MONTO -- una promoción de tipo VISITA registra un
+    Visita en su lugar (ver lealtad.services.acumulacion_service). Los
+    puntos que otorgó ya quedan fijos aquí con la promoción vigente al
+    momento; no se recalculan después aunque la promoción cambie."""
 
     costumer = models.ForeignKey(
         Costumer, on_delete=models.PROTECT, related_name="compras",

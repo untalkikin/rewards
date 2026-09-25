@@ -1,0 +1,131 @@
+{% extends "partials/base.html" %}
+{% block title %}Nueva promoción{% endblock title %}
+
+{% block content %}
+        <div class="main-content">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8 col-lg-6">
+                            <div class="card mt-4">
+                                <div class="card-body p-4">
+                                    <h5 class="card-title mb-3">Nueva promoción</h5>
+
+                                    {% if form.non_field_errors %}
+                                    <div class="alert alert-danger">
+                                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <form method="post" id="form-promocion">
+                                        {% csrf_token %}
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
+                                            {{ form.nombre }}
+                                            {% for error in form.nombre.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.descripcion.id_for_label }}">{{ form.descripcion.label }}</label>
+                                            {{ form.descripcion }}
+                                            {% for error in form.descripcion.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label d-block">¿Cómo se acumulan los puntos?</label>
+                                            <div class="d-flex gap-3">
+                                                {% for radio in form.tipo_mecanica %}
+                                                <div class="form-check">
+                                                    {{ radio.tag }}
+                                                    <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <div id="campos-monto" class="border rounded p-3 mb-3">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="{{ form.monto_base.id_for_label }}">{{ form.monto_base.label }}</label>
+                                                {{ form.monto_base }}
+                                                {% for error in form.monto_base.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                                <div class="form-text">Ej. 10.00 = cada $10 gastados otorgan los puntos de abajo.</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.puntos_otorgados.id_for_label }}">{{ form.puntos_otorgados.label }}</label>
+                                            {{ form.puntos_otorgados }}
+                                            {% for error in form.puntos_otorgados.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.meta_puntos.id_for_label }}">{{ form.meta_puntos.label }}</label>
+                                            {{ form.meta_puntos }}
+                                            {% for error in form.meta_puntos.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.descripcion_premio.id_for_label }}">{{ form.descripcion_premio.label }}</label>
+                                            {{ form.descripcion_premio }}
+                                            {% for error in form.descripcion_premio.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                        </div>
+
+                                        <hr>
+                                        <div class="form-check form-switch mb-2">
+                                            {{ form.limitar_escaneos }}
+                                            <label class="form-check-label" for="{{ form.limitar_escaneos.id_for_label }}">{{ form.limitar_escaneos.label }}</label>
+                                        </div>
+                                        <div id="campos-restriccion" class="border rounded p-3 mb-3">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="{{ form.max_escaneos_dia.id_for_label }}">{{ form.max_escaneos_dia.label }}</label>
+                                                {{ form.max_escaneos_dia }}
+                                            </div>
+                                            <div class="mb-0">
+                                                <label class="form-label d-block">{{ form.alcance.label }}</label>
+                                                {% for radio in form.alcance %}
+                                                <div class="form-check">
+                                                    {{ radio.tag }}
+                                                    <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <div class="form-check form-switch mb-3">
+                                            {{ form.activa }}
+                                            <label class="form-check-label" for="{{ form.activa.id_for_label }}">{{ form.activa.label }}</label>
+                                            <div class="form-text">Si la activas, cualquier otra promoción activa de este negocio se desactiva.</div>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary w-100">Crear promoción</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const radiosTipo = document.querySelectorAll('input[name="tipo_mecanica"]');
+        const campoMonto = document.getElementById("campos-monto");
+        const checkLimitar = document.getElementById("{{ form.limitar_escaneos.id_for_label }}");
+        const campoRestriccion = document.getElementById("campos-restriccion");
+
+        function actualizarTipo() {
+            const seleccionado = document.querySelector('input[name="tipo_mecanica"]:checked');
+            campoMonto.classList.toggle("d-none", !seleccionado || seleccionado.value !== "MONTO");
+        }
+
+        function actualizarRestriccion() {
+            campoRestriccion.classList.toggle("d-none", !checkLimitar.checked);
+        }
+
+        radiosTipo.forEach((radio) => radio.addEventListener("change", actualizarTipo));
+        checkLimitar.addEventListener("change", actualizarRestriccion);
+        actualizarTipo();
+        actualizarRestriccion();
+    })();
+</script>
+{% endblock extra_js %}

@@ -9,13 +9,9 @@
                         <div class="col-lg-5">
                             <div class="card">
                                 <div class="card-body">
-                                    <h5 class="card-title mb-1">{{ costumer.nombre }}</h5>
                                     <p class="text-muted mb-3">{{ costumer.telefono }}{% if costumer.email %} · {{ costumer.email }}{% endif %}</p>
-                                    <h2 class="text-primary mb-0">{{ tarjeta.saldo }}</h2>
-                                    <p class="text-muted">puntos actuales</p>
-                                    {% if regla %}
-                                    <p class="text-muted small mb-0">Meta: {{ regla.meta_puntos }} pts &mdash; {{ regla.descripcion_premio }}</p>
-                                    {% endif %}
+                                    {% include "partials/tarjeta_visual.html" %}
+                                    {% include "partials/progreso_promocion.html" %}
                                 </div>
                             </div>
 
@@ -23,7 +19,7 @@
                             <div class="card mt-3 border-success">
                                 <div class="card-body">
                                     <h6 class="mb-2">¡Alcanzó la meta!</h6>
-                                    <p class="text-muted mb-3">Puede canjear por: <strong>{{ regla.descripcion_premio }}</strong></p>
+                                    <p class="text-muted mb-3">Puede canjear por: <strong>{{ promocion.descripcion_premio }}</strong></p>
                                     <a href="{% url 'compras:canje_confirm' costumer.card_code %}" class="btn btn-success w-100">Efectuar canje</a>
                                 </div>
                             </div>
@@ -31,6 +27,17 @@
 
                             <div class="card mt-3">
                                 <div class="card-body">
+                                    {% if not promocion %}
+                                    <p class="text-muted mb-0">No hay una promoción activa configurada para este negocio.</p>
+                                    {% elif promocion.tipo_mecanica == "VISITA" %}
+                                    <h6 class="mb-3">Registrar visita</h6>
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-success w-100">
+                                            <i class="ri-qr-scan-2-line align-middle me-1"></i> Registrar visita
+                                        </button>
+                                    </form>
+                                    {% else %}
                                     <h6 class="mb-3">Registrar compra</h6>
                                     {% for error in form.non_field_errors %}
                                     <div class="alert alert-danger">{{ error }}</div>
@@ -50,6 +57,7 @@
                                         </div>
                                         <button type="submit" class="btn btn-success w-100">Registrar compra</button>
                                     </form>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

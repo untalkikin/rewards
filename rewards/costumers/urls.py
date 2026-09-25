@@ -5,6 +5,7 @@ from .views import (
     ClienteLogoutView,
     ClienteRegistradoView,
     MiCuentaView,
+    PersonalizarTarjetaView,
     RegistrarClienteView,
 )
 
@@ -16,4 +17,5 @@ urlpatterns = [
     path("mi-cuenta/login/", ClienteLoginView.as_view(), name="login"),
     path("mi-cuenta/logout/", ClienteLogoutView.as_view(), name="logout"),
     path("mi-cuenta/", MiCuentaView.as_view(), name="mi_cuenta"),
+    path("mi-cuenta/personalizar/", PersonalizarTarjetaView.as_view(), name="personalizar"),
 ]

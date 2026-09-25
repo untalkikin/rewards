@@ -4,18 +4,24 @@ from django.urls import reverse
 from django.views import View
 
 from cuentas.mixins import StaffRequiredMixin
-from lealtad.services.reglas_service import regla_vigente
+from lealtad.models import ESTILOS_FONDO
+from lealtad.services.promociones_service import casillas_de, promocion_vigente
 from stores.models import Store
+from wallets.services.apple_service import AppleWalletProvider
+from wallets.services.google_service import GoogleWalletProvider
 
-from .forms import ClienteLoginForm, RegistrarClienteForm
+from .forms import ClienteLoginForm, PersonalizarTarjetaForm, RegistrarClienteForm
 from .models import Costumer
 from .session_auth import ClienteRequiredMixin, get_current_costumer, login_costumer, logout_costumer
 
+_apple_wallet = AppleWalletProvider()
+_google_wallet = GoogleWalletProvider()
 
-def _progreso(tarjeta, regla):
-    if not regla or not regla.meta_puntos:
+
+def _progreso(tarjeta, promocion):
+    if not promocion or not promocion.meta_puntos:
         return 0
-    return max(0, min(100, int(tarjeta.saldo * 100 / regla.meta_puntos)))
+    return max(0, min(100, int(tarjeta.saldo * 100 / promocion.meta_puntos)))
 
 
 class RegistrarClienteView(StaffRequiredMixin, View):
@@ -89,12 +95,46 @@ class MiCuentaView(ClienteRequiredMixin, View):
     def get(self, request):
         costumer = request.costumer
         tarjeta = costumer.tarjeta
-        regla = regla_vigente(Store.objects.first())
+        promocion = promocion_vigente(Store.objects.first())
         context = {
             "costumer": costumer,
             "tarjeta": tarjeta,
             "historial": tarjeta.movimientos.all()[:20],
-            "regla": regla,
-            "progreso": _progreso(tarjeta, regla),
+            "promocion": promocion,
+            "progreso": _progreso(tarjeta, promocion),
+            "casillas": casillas_de(tarjeta, promocion),
+            "apple_wallet_disponible": _apple_wallet.is_configured(),
+            "google_wallet_disponible": _google_wallet.is_configured(),
         }
         return render(request, self.template_name, context)
+
+
+class PersonalizarTarjetaView(ClienteRequiredMixin, View):
+    """El cliente elige el fondo de su tarjeta: un estilo prediseñado, un
+    color personalizado, o volver al color de marca del negocio."""
+
+    template_name = "costumers/personalizar.html"
+
+    def get(self, request):
+        form = PersonalizarTarjetaForm(instance=request.costumer.tarjeta)
+        return self._render(request, form)
+
+    def post(self, request):
+        tarjeta = request.costumer.tarjeta
+        form = PersonalizarTarjetaForm(request.POST, request.FILES, instance=tarjeta)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Tu tarjeta se personalizó correctamente.")
+            return redirect("costumers:mi_cuenta")
+        return self._render(request, form)
+
+    def _render(self, request, form):
+        tarjeta = request.costumer.tarjeta
+        promocion = promocion_vigente(Store.objects.first())
+        return render(request, self.template_name, {
+            "form": form,
+            "tarjeta": tarjeta,
+            "estilos_fondo": ESTILOS_FONDO,
+            "promocion": promocion,
+            "casillas": casillas_de(tarjeta, promocion),
+        })

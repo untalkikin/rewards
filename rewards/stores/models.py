@@ -32,5 +32,13 @@ class Store(models.Model):
     email = models.EmailField(blank=True)
     direccion = models.CharField(max_length=255, blank=True)
 
+    class Meta:
+        # El id es un UUID aleatorio: sin este ordering explícito,
+        # Store.objects.first() (usado en varias vistas para resolver
+        # "el negocio" en este despliegue de un solo negocio) ordenaría
+        # implícitamente por ese UUID y devolvería un Store arbitrario en
+        # cuanto existiera más de uno, en vez del primero creado.
+        ordering = ["creado_en"]
+
     def __str__(self):
         return self.name
