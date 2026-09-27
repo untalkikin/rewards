@@ -16,6 +16,23 @@ class AlcanceRestriccion(models.TextChoices):
     NEGOCIO = "NEGOCIO", "Por negocio (todas las sucursales)"
 
 
+ESTILOS_FONDO = {
+    "atardecer": {"label": "Atardecer", "css": "linear-gradient(135deg, #ff9966, #ff5e62)", "solido": "#ff5e62"},
+    "oceano": {"label": "Océano", "css": "linear-gradient(135deg, #2193b0, #6dd5ed)", "solido": "#2193b0"},
+    "bosque": {"label": "Bosque", "css": "linear-gradient(135deg, #11998e, #38ef7d)", "solido": "#11998e"},
+    "noche": {"label": "Noche", "css": "linear-gradient(135deg, #232526, #414345)", "solido": "#232526"},
+    "dorado": {"label": "Dorado", "css": "linear-gradient(135deg, #f7971e, #ffd200)", "solido": "#f7971e"},
+}
+
+ESTILO_FONDO_PERSONALIZADO = "personalizado"
+
+ESTILO_FONDO_CHOICES = (
+    [("", "Color de marca del negocio")]
+    + [(clave, valor["label"]) for clave, valor in ESTILOS_FONDO.items()]
+    + [(ESTILO_FONDO_PERSONALIZADO, "Color personalizado")]
+)
+
+
 class Promocion(ModelClass):
     """Configura la mecánica de acumulación de puntos y la meta para el
     premio. Versionable por fecha de vigencia para no romper el histórico
@@ -27,6 +44,11 @@ class Promocion(ModelClass):
     - VISITA: cada escaneo otorga puntos_otorgados puntos fijos (monto_base
       no aplica). meta_puntos representa entonces la cantidad de "casillas"
       de la tarjeta de sellos.
+
+    El diseño de la tarjeta (estilo_fondo/color_fondo/sello_imagen) también
+    vive aquí, no en TarjetaLealtad: lo define el Dueño una sola vez al
+    crear el programa de lealtad (como en woncards), y todas las tarjetas
+    de los clientes bajo esta promoción comparten ese mismo diseño.
     """
 
     store = models.ForeignKey(
@@ -56,6 +78,20 @@ class Promocion(ModelClass):
     vigente_hasta = models.DateTimeField(null=True, blank=True)
     activa = models.BooleanField(default=True)
 
+    # --- Diseño de la tarjeta ---
+    estilo_fondo = models.CharField(
+        max_length=20, blank=True, choices=ESTILO_FONDO_CHOICES,
+        help_text="Fondo prediseñado de la tarjeta. 'Color personalizado' usa color_fondo.",
+    )
+    color_fondo = models.CharField(
+        max_length=7, blank=True,
+        help_text="Color hex para la opción 'Color personalizado', ej. #405189.",
+    )
+    sello_imagen = models.ImageField(
+        upload_to="promociones/sellos/", blank=True, null=True,
+        help_text="Ícono para cada sello/visita de la tarjeta (opcional, solo mecánica VISITA). Sin uno, se usa una estrella por default.",
+    )
+
     class Meta:
         verbose_name = "Promoción"
         verbose_name_plural = "Promociones"
@@ -63,6 +99,25 @@ class Promocion(ModelClass):
 
     def __str__(self):
         return f"{self.nombre} - {self.store.name}"
+
+    @property
+    def fondo_css(self):
+        """Valor para el CSS `background` de la tarjeta -- puede ser un
+        degradado. Vacío = usar el color de marca del negocio."""
+        if self.estilo_fondo == ESTILO_FONDO_PERSONALIZADO:
+            return self.color_fondo
+        estilo = ESTILOS_FONDO.get(self.estilo_fondo)
+        return estilo["css"] if estilo else ""
+
+    @property
+    def fondo_solido(self):
+        """Equivalente en un solo color plano, para superficies que no
+        soportan degradados (ej. el `backgroundColor` de un pase de Apple
+        Wallet). Vacío = usar el color de marca del negocio."""
+        if self.estilo_fondo == ESTILO_FONDO_PERSONALIZADO:
+            return self.color_fondo
+        estilo = ESTILOS_FONDO.get(self.estilo_fondo)
+        return estilo["solido"] if estilo else ""
 
 
 class RestriccionPromocion(models.Model):
@@ -91,27 +146,11 @@ class RestriccionPromocion(models.Model):
         return f"Máx. {self.max_escaneos_dia}/día ({self.get_alcance_display()}) - {self.promocion.nombre}"
 
 
-ESTILOS_FONDO = {
-    "atardecer": {"label": "Atardecer", "css": "linear-gradient(135deg, #ff9966, #ff5e62)", "solido": "#ff5e62"},
-    "oceano": {"label": "Océano", "css": "linear-gradient(135deg, #2193b0, #6dd5ed)", "solido": "#2193b0"},
-    "bosque": {"label": "Bosque", "css": "linear-gradient(135deg, #11998e, #38ef7d)", "solido": "#11998e"},
-    "noche": {"label": "Noche", "css": "linear-gradient(135deg, #232526, #414345)", "solido": "#232526"},
-    "dorado": {"label": "Dorado", "css": "linear-gradient(135deg, #f7971e, #ffd200)", "solido": "#f7971e"},
-}
-
-ESTILO_FONDO_PERSONALIZADO = "personalizado"
-
-ESTILO_FONDO_CHOICES = (
-    [("", "Color de marca del negocio")]
-    + [(clave, valor["label"]) for clave, valor in ESTILOS_FONDO.items()]
-    + [(ESTILO_FONDO_PERSONALIZADO, "Color personalizado")]
-)
-
-
 class TarjetaLealtad(models.Model):
     """1-1 con Costumer. El código del QR es el `card_code` que ya existe
     en Costumer (no se duplica). El saldo NUNCA se guarda aquí: se deriva
-    sumando los `MovimientoPuntos` del ledger."""
+    sumando los `MovimientoPuntos` del ledger. El diseño visual NO vive
+    aquí -- lo define el Dueño en la Promocion (ver arriba)."""
 
     costumer = models.OneToOneField(
         Costumer,
@@ -121,19 +160,6 @@ class TarjetaLealtad(models.Model):
     )
     activa = models.BooleanField(default=True)
     fecha_alta = models.DateTimeField(auto_now_add=True)
-
-    estilo_fondo = models.CharField(
-        max_length=20, blank=True, choices=ESTILO_FONDO_CHOICES,
-        help_text="Fondo prediseñado de la tarjeta. 'Color personalizado' usa color_fondo.",
-    )
-    color_fondo = models.CharField(
-        max_length=7, blank=True,
-        help_text="Color hex para la opción 'Color personalizado', ej. #405189.",
-    )
-    sello_imagen = models.ImageField(
-        upload_to="tarjetas/sellos/", blank=True, null=True,
-        help_text="Ícono propio para cada sello/visita de la tarjeta (opcional). Sin uno, se usa una estrella por default.",
-    )
 
     class Meta:
         verbose_name = "Tarjeta de lealtad"
@@ -147,25 +173,6 @@ class TarjetaLealtad(models.Model):
     def saldo(self):
         total = self.movimientos.aggregate(total=models.Sum("puntos"))["total"]
         return total or 0
-
-    @property
-    def fondo_css(self):
-        """Valor para el CSS `background` de la tarjeta -- puede ser un
-        degradado. Vacío = usar el color de marca del negocio."""
-        if self.estilo_fondo == ESTILO_FONDO_PERSONALIZADO:
-            return self.color_fondo
-        estilo = ESTILOS_FONDO.get(self.estilo_fondo)
-        return estilo["css"] if estilo else ""
-
-    @property
-    def fondo_solido(self):
-        """Equivalente en un solo color plano, para superficies que no
-        soportan degradados (ej. el `backgroundColor` de un pase de Apple
-        Wallet). Vacío = usar el color de marca del negocio."""
-        if self.estilo_fondo == ESTILO_FONDO_PERSONALIZADO:
-            return self.color_fondo
-        estilo = ESTILOS_FONDO.get(self.estilo_fondo)
-        return estilo["solido"] if estilo else ""
 
     def __str__(self):
         return f"Tarjeta de {self.costumer} ({self.codigo})"

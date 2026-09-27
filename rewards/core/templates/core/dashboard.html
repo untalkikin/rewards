@@ -2,6 +2,13 @@
 {% load static %}
 {% block title %}Dashboard{% endblock title %}
 
+{% block extra_css %}
+{% if totales %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap.min.css" />
+{% endif %}
+{% endblock extra_css %}
+
 {% block content %}
         <div class="main-content">
             <div class="page-content">
@@ -19,6 +26,105 @@
                         </div>
                     </div>
 
+                    {% if totales %}
+                    <div class="row">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <p class="text-uppercase fw-medium text-muted mb-1">Ingresos</p>
+                                    <h4 class="mb-0">${{ totales.ingresos }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <p class="text-uppercase fw-medium text-muted mb-1">Puntos otorgados</p>
+                                    <h4 class="mb-0 text-success">+{{ totales.puntos_otorgados }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <p class="text-uppercase fw-medium text-muted mb-1">Puntos canjeados</p>
+                                    <h4 class="mb-0 text-danger">-{{ totales.puntos_canjeados }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="card card-animate">
+                                <div class="card-body">
+                                    <p class="text-uppercase fw-medium text-muted mb-1">Clientes registrados</p>
+                                    <h4 class="mb-0">{{ totales.total_clientes }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4 class="card-title mb-0">Puntos otorgados — últimos {{ chart_labels|length }} días</h4>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="puntosChart" height="90"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h4 class="card-title mb-0">Actividad reciente</h4>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table id="tabla-actividad" class="table table-bordered dt-responsive nowrap table-striped align-middle" style="width:100%">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fecha</th>
+                                                    <th>Cliente</th>
+                                                    <th>Tipo</th>
+                                                    <th>Sucursal</th>
+                                                    <th>Registrado por</th>
+                                                    <th>Puntos</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for mov in actividad %}
+                                                <tr>
+                                                    <td data-order="{{ mov.fecha|date:'U' }}">{{ mov.fecha|date:"d M Y, H:i" }}</td>
+                                                    <td>{{ mov.tarjeta.costumer.nombre }}</td>
+                                                    <td>{{ mov.get_tipo_display }}</td>
+                                                    <td>
+                                                        {% if mov.compra %}{{ mov.compra.sucursal.nombre }}
+                                                        {% elif mov.visita %}{{ mov.visita.sucursal.nombre }}
+                                                        {% elif mov.canje %}{{ mov.canje.sucursal.nombre }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if mov.compra %}{{ mov.compra.cajero.get_username }}
+                                                        {% elif mov.visita %}{{ mov.visita.cajero.get_username }}
+                                                        {% elif mov.canje %}{{ mov.canje.cajero.get_username }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="{% if mov.puntos < 0 %}text-danger{% else %}text-success{% endif %}">
+                                                        {{ mov.puntos|stringformat:"+d" }}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
                     <div class="row">
                         <div class="col-12">
                             <div class="card">
@@ -32,7 +138,59 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
 {% endblock content %}
+
+{% if totales %}
+{% block extra_js %}
+{{ chart_labels|json_script:"chart-labels" }}
+{{ chart_data|json_script:"chart-data" }}
+<script src="{% static 'libs/chart.js/dist/chart.umd.js'%}"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+<script>
+    (function () {
+        const labels = JSON.parse(document.getElementById("chart-labels").textContent);
+        const data = JSON.parse(document.getElementById("chart-data").textContent);
+        const estilos = getComputedStyle(document.documentElement);
+        const colorPrimario = estilos.getPropertyValue("--vz-primary").trim() || "#405189";
+
+        new Chart(document.getElementById("puntosChart"), {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Puntos otorgados",
+                    data: data,
+                    backgroundColor: colorPrimario,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+        });
+
+        $("#tabla-actividad").DataTable({
+            order: [[0, "desc"]],
+            responsive: true,
+            language: {
+                search: "Buscar:",
+                lengthMenu: "Mostrar _MENU_ registros",
+                info: "_START_ a _END_ de _TOTAL_ registros",
+                paginate: { previous: "Anterior", next: "Siguiente" },
+                zeroRecords: "Sin resultados",
+                infoEmpty: "Sin actividad todavía",
+            },
+        });
+    })();
+</script>
+{% endblock extra_js %}
+{% endif %}

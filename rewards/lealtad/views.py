@@ -11,7 +11,7 @@ from wallets.services.apple_service import AppleWalletProvider
 from wallets.services.google_service import GoogleWalletProvider
 
 from .forms import PromocionForm
-from .models import Promocion, TarjetaLealtad
+from .models import ESTILOS_FONDO, Promocion, TarjetaLealtad
 from .services.promociones_service import casillas_de, promocion_vigente
 from .services.qr_service import generar_qr_png
 
@@ -115,15 +115,15 @@ class PromocionCreateView(DuenoRequiredMixin, View):
     template_name = "lealtad/promocion_form.html"
 
     def get(self, request):
-        return render(request, self.template_name, {"form": PromocionForm()})
+        return render(request, self.template_name, {"form": PromocionForm(), "estilos_fondo": ESTILOS_FONDO})
 
     def post(self, request):
-        form = PromocionForm(request.POST)
+        form = PromocionForm(request.POST, request.FILES)
         if form.is_valid():
             form.save(store=Store.objects.first())
             messages.success(request, "Promoción creada correctamente.")
             return redirect("lealtad:promocion_list")
-        return render(request, self.template_name, {"form": form})
+        return render(request, self.template_name, {"form": form, "estilos_fondo": ESTILOS_FONDO})
 
 
 class PromocionActivarView(DuenoRequiredMixin, View):

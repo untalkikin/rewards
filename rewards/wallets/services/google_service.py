@@ -62,9 +62,9 @@ class GoogleWalletProvider(WalletProvider):
             },
         }
         # Igual que en Apple Wallet, Google Wallet solo admite un color
-        # plano; fondo_solido ya trae el equivalente sólido si el cliente
-        # personalizó su tarjeta con un estilo con degradado.
-        color_fondo = tarjeta.fondo_solido or (negocio.color_primario if negocio else None)
+        # plano; fondo_solido ya trae el equivalente sólido si el dueño
+        # personalizó la promoción con un estilo con degradado.
+        color_fondo = (promocion.fondo_solido if promocion else "") or (negocio.color_primario if negocio else None)
         if color_fondo:
             loyalty_object["hexBackgroundColor"] = color_fondo
 

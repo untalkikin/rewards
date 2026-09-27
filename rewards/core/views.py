@@ -1,11 +1,19 @@
+from datetime import timedelta
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Sum
+from django.utils import timezone
 from django.views.generic import TemplateView
 
 from compras.models import Compra
+from costumers.models import Costumer
 from cuentas.mixins import DuenoRequiredMixin
-from lealtad.models import Canje
+from cuentas.models import Rol
+from lealtad.models import Canje, MovimientoPuntos, TipoMovimiento, Visita
 from locations.models import Sucursal
+from stores.models import Store
+
+DIAS_GRAFICA = 14
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -13,8 +21,56 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["perfil"] = getattr(self.request.user, "perfil", None)
+        perfil = getattr(self.request.user, "perfil", None)
+        context["perfil"] = perfil
+        if perfil and perfil.rol == Rol.DUENO and perfil.activo:
+            context.update(self._dueno_context())
         return context
+
+    def _dueno_context(self):
+        store = Store.objects.first()
+        compras_qs = Compra.objects.filter(sucursal__store=store)
+        visitas_qs = Visita.objects.filter(sucursal__store=store)
+        canjes_qs = Canje.objects.filter(sucursal__store=store)
+
+        puntos_compras = compras_qs.aggregate(t=Sum("puntos_otorgados"))["t"] or 0
+        puntos_visitas = visitas_qs.aggregate(t=Sum("puntos_otorgados"))["t"] or 0
+
+        totales = {
+            "ingresos": compras_qs.aggregate(t=Sum("monto"))["t"] or 0,
+            "puntos_otorgados": puntos_compras + puntos_visitas,
+            "puntos_canjeados": canjes_qs.aggregate(t=Sum("puntos_consumidos"))["t"] or 0,
+            "total_clientes": Costumer.objects.count(),
+        }
+
+        dias = [
+            timezone.localdate() - timedelta(days=i)
+            for i in range(DIAS_GRAFICA - 1, -1, -1)
+        ]
+        movimientos_qs = MovimientoPuntos.objects.filter(
+            tipo=TipoMovimiento.ACUMULACION,
+            tarjeta__costumer__isnull=False,
+        )
+        serie = []
+        for dia in dias:
+            pts = movimientos_qs.filter(fecha__date=dia).aggregate(t=Sum("puntos"))["t"] or 0
+            serie.append(pts)
+
+        actividad = list(
+            MovimientoPuntos.objects.select_related(
+                "tarjeta__costumer",
+                "compra__sucursal", "compra__cajero",
+                "visita__sucursal", "visita__cajero",
+                "canje__sucursal", "canje__cajero",
+            ).order_by("-fecha")[:50]
+        )
+
+        return {
+            "totales": totales,
+            "chart_labels": [dia.strftime("%d %b") for dia in dias],
+            "chart_data": serie,
+            "actividad": actividad,
+        }
 
 
 class ReportesView(DuenoRequiredMixin, TemplateView):

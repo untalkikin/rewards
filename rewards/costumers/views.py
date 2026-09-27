@@ -4,13 +4,12 @@ from django.urls import reverse
 from django.views import View
 
 from cuentas.mixins import StaffRequiredMixin
-from lealtad.models import ESTILOS_FONDO
 from lealtad.services.promociones_service import casillas_de, promocion_vigente
 from stores.models import Store
 from wallets.services.apple_service import AppleWalletProvider
 from wallets.services.google_service import GoogleWalletProvider
 
-from .forms import ClienteLoginForm, PersonalizarTarjetaForm, RegistrarClienteForm
+from .forms import ClienteLoginForm, RegistrarClienteForm
 from .models import Costumer
 from .session_auth import ClienteRequiredMixin, get_current_costumer, login_costumer, logout_costumer
 
@@ -53,6 +52,29 @@ class ClienteRegistradoView(StaffRequiredMixin, View):
             "costumer": costumer,
             "tarjeta": costumer.tarjeta,
         })
+
+
+class ClienteRegistroView(View):
+    """Autorregistro del cliente final desde la pantalla de login: reusa el
+    mismo RegistrarClienteForm que usa el staff, pero público y sin pantalla
+    de confirmación -- el cliente queda con sesión iniciada directo en su
+    panel (mi-cuenta), tarjeta y QR ya listos."""
+
+    template_name = "costumers/registro.html"
+
+    def get(self, request):
+        if get_current_costumer(request):
+            return redirect("costumers:mi_cuenta")
+        return render(request, self.template_name, {"form": RegistrarClienteForm()})
+
+    def post(self, request):
+        form = RegistrarClienteForm(request.POST)
+        if form.is_valid():
+            costumer = form.save(descripcion="Cliente autorregistrado desde el login.")
+            login_costumer(request, costumer)
+            messages.success(request, f"¡Bienvenido, {costumer.nombre}! Tu tarjeta ya está lista.")
+            return redirect("costumers:mi_cuenta")
+        return render(request, self.template_name, {"form": form})
 
 
 class ClienteLoginView(View):
@@ -107,34 +129,3 @@ class MiCuentaView(ClienteRequiredMixin, View):
             "google_wallet_disponible": _google_wallet.is_configured(),
         }
         return render(request, self.template_name, context)
-
-
-class PersonalizarTarjetaView(ClienteRequiredMixin, View):
-    """El cliente elige el fondo de su tarjeta: un estilo prediseñado, un
-    color personalizado, o volver al color de marca del negocio."""
-
-    template_name = "costumers/personalizar.html"
-
-    def get(self, request):
-        form = PersonalizarTarjetaForm(instance=request.costumer.tarjeta)
-        return self._render(request, form)
-
-    def post(self, request):
-        tarjeta = request.costumer.tarjeta
-        form = PersonalizarTarjetaForm(request.POST, request.FILES, instance=tarjeta)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Tu tarjeta se personalizó correctamente.")
-            return redirect("costumers:mi_cuenta")
-        return self._render(request, form)
-
-    def _render(self, request, form):
-        tarjeta = request.costumer.tarjeta
-        promocion = promocion_vigente(Store.objects.first())
-        return render(request, self.template_name, {
-            "form": form,
-            "tarjeta": tarjeta,
-            "estilos_fondo": ESTILOS_FONDO,
-            "promocion": promocion,
-            "casillas": casillas_de(tarjeta, promocion),
-        })

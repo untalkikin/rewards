@@ -46,9 +46,9 @@ class AppleWalletProvider(WalletProvider):
         passfile.serialNumber = tarjeta.codigo
         passfile.description = f"Tarjeta de lealtad - {nombre_negocio}"
         # Apple Wallet solo soporta un color plano (nada de degradados): si
-        # el cliente personalizó su tarjeta, fondo_solido ya trae el color
-        # sólido equivalente al estilo elegido.
-        color_fondo = tarjeta.fondo_solido or (negocio.color_primario if negocio else None)
+        # el dueño personalizó el diseño de la promoción, fondo_solido ya
+        # trae el color sólido equivalente al estilo elegido.
+        color_fondo = (promocion.fondo_solido if promocion else "") or (negocio.color_primario if negocio else None)
         if color_fondo:
             passfile.backgroundColor = _hex_to_rgb_css(color_fondo)
 

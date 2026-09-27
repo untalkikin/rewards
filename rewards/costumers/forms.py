@@ -1,7 +1,5 @@
 from django import forms
 
-from lealtad.models import ESTILO_FONDO_PERSONALIZADO, TarjetaLealtad
-
 from .models import Costumer
 
 _PIN_WIDGET_ATTRS = {
@@ -38,6 +36,10 @@ class RegistrarClienteForm(forms.ModelForm):
             "telefono": forms.TextInput(attrs={"class": "form-control"}),
             "email": forms.EmailInput(attrs={"class": "form-control"}),
         }
+        error_messages = {
+            "telefono": {"unique": "Ya existe una tarjeta registrada con este teléfono."},
+            "email": {"unique": "Ya existe una tarjeta registrada con este correo."},
+        }
 
     def clean_pin(self):
         pin = self.cleaned_data["pin"]
@@ -53,40 +55,13 @@ class RegistrarClienteForm(forms.ModelForm):
             self.add_error("pin_confirmacion", "Los PIN no coinciden.")
         return cleaned
 
-    def save(self, commit=True):
+    def save(self, commit=True, descripcion="Cliente registrado desde el panel de staff."):
         costumer = super().save(commit=False)
-        costumer.descripcion = "Cliente registrado desde el panel de staff."
+        costumer.descripcion = descripcion
         costumer.set_pin(self.cleaned_data["pin"])
         if commit:
             costumer.save()
         return costumer
-
-
-class PersonalizarTarjetaForm(forms.ModelForm):
-    """El cliente elige el fondo de su tarjeta -- un estilo prediseñado, un
-    color propio, o el color de marca del negocio (default) -- y, si su
-    promoción es de tipo VISITA, puede subir su propio ícono de sello."""
-
-    class Meta:
-        model = TarjetaLealtad
-        fields = ["estilo_fondo", "color_fondo", "sello_imagen"]
-        widgets = {
-            "estilo_fondo": forms.RadioSelect,
-            "color_fondo": forms.TextInput(attrs={
-                "class": "form-control form-control-color",
-                "type": "color",
-                "title": "Elige un color",
-            }),
-            "sello_imagen": forms.ClearableFileInput(attrs={
-                "class": "form-control", "accept": "image/*",
-            }),
-        }
-
-    def clean(self):
-        cleaned = super().clean()
-        if cleaned.get("estilo_fondo") == ESTILO_FONDO_PERSONALIZADO and not cleaned.get("color_fondo"):
-            self.add_error("color_fondo", "Elige un color para la opción 'Color personalizado'.")
-        return cleaned
 
 
 class ClienteLoginForm(forms.Form):

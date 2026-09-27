@@ -38,12 +38,15 @@
 
                 <div class="row justify-content-center">
                     <div class="col-md-8 col-lg-6 col-xl-5">
+                        {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-success">{{ message }}</div>
+                        {% endfor %}
+                        {% endif %}
+
                         <div class="card mt-4">
                             <div class="card-body p-4">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <a href="{% url 'costumers:personalizar' %}" class="text-muted small">
-                                        <i class="ri-palette-line align-middle me-1"></i>Personalizar
-                                    </a>
+                                <div class="d-flex justify-content-end mb-2">
                                     <a href="{% url 'costumers:logout' %}" class="text-muted small">
                                         <i class="ri-logout-box-line align-middle me-1"></i>Cerrar sesión
                                     </a>

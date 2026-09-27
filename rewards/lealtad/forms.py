@@ -1,7 +1,13 @@
 from django import forms
 from django.utils import timezone
 
-from .models import AlcanceRestriccion, Promocion, RestriccionPromocion, TipoMecanica
+from .models import (
+    AlcanceRestriccion,
+    ESTILO_FONDO_PERSONALIZADO,
+    Promocion,
+    RestriccionPromocion,
+    TipoMecanica,
+)
 
 
 class PromocionForm(forms.ModelForm):
@@ -31,11 +37,14 @@ class PromocionForm(forms.ModelForm):
         fields = [
             "nombre", "descripcion", "tipo_mecanica", "monto_base",
             "puntos_otorgados", "meta_puntos", "descripcion_premio", "activa",
+            "estilo_fondo", "color_fondo", "sello_imagen",
         ]
         labels = {
             "puntos_otorgados": "Puntos por cada monto_base gastado (o puntos fijos por visita)",
             "meta_puntos": "Meta de puntos -o casillas, si es por visita- para el premio",
             "activa": "Dejar esta promoción activa de inmediato",
+            "color_fondo": "Color personalizado",
+            "sello_imagen": "Ícono de los sellos (opcional)",
         }
         widgets = {
             "nombre": forms.TextInput(attrs={"class": "form-control", "autofocus": True}),
@@ -46,12 +55,23 @@ class PromocionForm(forms.ModelForm):
             "meta_puntos": forms.NumberInput(attrs={"class": "form-control"}),
             "descripcion_premio": forms.TextInput(attrs={"class": "form-control"}),
             "activa": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "estilo_fondo": forms.RadioSelect,
+            "color_fondo": forms.TextInput(attrs={
+                "class": "form-control form-control-color",
+                "type": "color",
+                "title": "Elige un color",
+            }),
+            "sello_imagen": forms.ClearableFileInput(attrs={
+                "class": "form-control", "accept": "image/*",
+            }),
         }
 
     def clean(self):
         cleaned = super().clean()
         if cleaned.get("tipo_mecanica") == TipoMecanica.MONTO and not cleaned.get("monto_base"):
             self.add_error("monto_base", "Requerido para promociones por monto de compra.")
+        if cleaned.get("estilo_fondo") == ESTILO_FONDO_PERSONALIZADO and not cleaned.get("color_fondo"):
+            self.add_error("color_fondo", "Elige un color para la opción 'Color personalizado'.")
         return cleaned
 
     def save(self, *, store, commit=True):

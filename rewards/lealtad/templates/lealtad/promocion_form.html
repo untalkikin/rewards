@@ -1,101 +1,210 @@
 {% extends "partials/base.html" %}
 {% block title %}Nueva promoción{% endblock title %}
 
+{% block extra_css %}
+<style>
+    .opcion-fondo { cursor: pointer; }
+    .opcion-fondo input { position: absolute; opacity: 0; pointer-events: none; }
+    .opcion-fondo .swatch {
+        width: 36px; height: 36px; border-radius: 50%;
+        border: 2px solid var(--vz-border-color);
+    }
+    .opcion-fondo input:checked ~ .swatch {
+        border-color: var(--vz-primary);
+        box-shadow: 0 0 0 2px var(--vz-primary);
+    }
+</style>
+{% endblock extra_css %}
+
 {% block content %}
         <div class="main-content">
             <div class="page-content">
                 <div class="container-fluid">
                     <div class="row justify-content-center">
-                        <div class="col-md-8 col-lg-6">
-                            <div class="card mt-4">
-                                <div class="card-body p-4">
-                                    <h5 class="card-title mb-3">Nueva promoción</h5>
+                        <div class="col-md-10 col-lg-8">
+                            <div class="row">
+                                <div class="col-lg-7">
+                                    <div class="card mt-4">
+                                        <div class="card-body p-4">
+                                            <h5 class="card-title mb-3">Nueva promoción</h5>
 
-                                    {% if form.non_field_errors %}
-                                    <div class="alert alert-danger">
-                                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                                            {% if form.non_field_errors %}
+                                            <div class="alert alert-danger">
+                                                {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                                            </div>
+                                            {% endif %}
+
+                                            <form method="post" id="form-promocion" enctype="multipart/form-data">
+                                                {% csrf_token %}
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
+                                                    {{ form.nombre }}
+                                                    {% for error in form.nombre.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="{{ form.descripcion.id_for_label }}">{{ form.descripcion.label }}</label>
+                                                    {{ form.descripcion }}
+                                                    {% for error in form.descripcion.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label d-block">¿Cómo se acumulan los puntos?</label>
+                                                    <div class="d-flex gap-3">
+                                                        {% for radio in form.tipo_mecanica %}
+                                                        <div class="form-check">
+                                                            {{ radio.tag }}
+                                                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+
+                                                <div id="campos-monto" class="border rounded p-3 mb-3">
+                                                    <div class="mb-3">
+                                                        <label class="form-label" for="{{ form.monto_base.id_for_label }}">{{ form.monto_base.label }}</label>
+                                                        {{ form.monto_base }}
+                                                        {% for error in form.monto_base.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                                        <div class="form-text">Ej. 10.00 = cada $10 gastados otorgan los puntos de abajo.</div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="{{ form.puntos_otorgados.id_for_label }}">{{ form.puntos_otorgados.label }}</label>
+                                                    {{ form.puntos_otorgados }}
+                                                    {% for error in form.puntos_otorgados.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="{{ form.meta_puntos.id_for_label }}">{{ form.meta_puntos.label }}</label>
+                                                    {{ form.meta_puntos }}
+                                                    {% for error in form.meta_puntos.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="{{ form.descripcion_premio.id_for_label }}">{{ form.descripcion_premio.label }}</label>
+                                                    {{ form.descripcion_premio }}
+                                                    {% for error in form.descripcion_premio.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                                </div>
+
+                                                <hr>
+                                                <label class="form-label d-block mb-2">Diseño de la tarjeta</label>
+                                                <p class="text-muted small mb-2">Este diseño lo verán todos los clientes con esta promoción.</p>
+                                                <div class="d-flex flex-wrap gap-3 mb-3">
+                                                    <label class="opcion-fondo text-center" style="width: 64px;">
+                                                        <input type="radio" name="estilo_fondo" value=""
+                                                               {% if form.estilo_fondo.value == "" or not form.estilo_fondo.value %}checked{% endif %}
+                                                               data-css="{{ negocio.color_primario|default:'#405189' }}">
+                                                        <span class="swatch d-inline-block" style="background: {{ negocio.color_primario|default:'#405189' }};"></span>
+                                                        <div class="fs-11 text-muted mt-1">Marca</div>
+                                                    </label>
+
+                                                    {% for clave, estilo in estilos_fondo.items %}
+                                                    <label class="opcion-fondo text-center" style="width: 64px;">
+                                                        <input type="radio" name="estilo_fondo" value="{{ clave }}"
+                                                               {% if form.estilo_fondo.value == clave %}checked{% endif %}
+                                                               data-css="{{ estilo.css }}">
+                                                        <span class="swatch d-inline-block" style="background: {{ estilo.css }};"></span>
+                                                        <div class="fs-11 text-muted mt-1">{{ estilo.label }}</div>
+                                                    </label>
+                                                    {% endfor %}
+
+                                                    <label class="opcion-fondo text-center" style="width: 64px;">
+                                                        <input type="radio" name="estilo_fondo" value="personalizado" id="opcion-personalizado"
+                                                               {% if form.estilo_fondo.value == "personalizado" %}checked{% endif %}
+                                                               data-css="">
+                                                        <span class="swatch d-inline-block d-flex align-items-center justify-content-center" style="background: repeating-conic-gradient(#e9ecef 0% 25%, #fff 0% 50%) 50% / 12px 12px;">
+                                                            <i class="ri-palette-line"></i>
+                                                        </span>
+                                                        <div class="fs-11 text-muted mt-1">Propio</div>
+                                                    </label>
+                                                </div>
+
+                                                <div id="campo-color-personalizado" class="mb-3">
+                                                    <label class="form-label" for="{{ form.color_fondo.id_for_label }}">{{ form.color_fondo.label }}</label>
+                                                    {{ form.color_fondo }}
+                                                    {% for error in form.color_fondo.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                                </div>
+
+                                                <div id="campo-sello-imagen" class="mb-3">
+                                                    <label class="form-label d-block mb-1" for="{{ form.sello_imagen.id_for_label }}">{{ form.sello_imagen.label }}</label>
+                                                    <p class="text-muted small mb-2">Ícono que marca cada visita en la tarjeta de sellos. Sin uno, se usa una estrella.</p>
+                                                    {{ form.sello_imagen }}
+                                                    {% for error in form.sello_imagen.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                                </div>
+
+                                                <hr>
+                                                <div class="form-check form-switch mb-2">
+                                                    {{ form.limitar_escaneos }}
+                                                    <label class="form-check-label" for="{{ form.limitar_escaneos.id_for_label }}">{{ form.limitar_escaneos.label }}</label>
+                                                </div>
+                                                <div id="campos-restriccion" class="border rounded p-3 mb-3">
+                                                    <div class="mb-3">
+                                                        <label class="form-label" for="{{ form.max_escaneos_dia.id_for_label }}">{{ form.max_escaneos_dia.label }}</label>
+                                                        {{ form.max_escaneos_dia }}
+                                                    </div>
+                                                    <div class="mb-0">
+                                                        <label class="form-label d-block">{{ form.alcance.label }}</label>
+                                                        {% for radio in form.alcance %}
+                                                        <div class="form-check">
+                                                            {{ radio.tag }}
+                                                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+
+                                                <div class="form-check form-switch mb-3">
+                                                    {{ form.activa }}
+                                                    <label class="form-check-label" for="{{ form.activa.id_for_label }}">{{ form.activa.label }}</label>
+                                                    <div class="form-text">Si la activas, cualquier otra promoción activa de este negocio se desactiva.</div>
+                                                </div>
+
+                                                <button type="submit" class="btn btn-primary w-100">Crear promoción</button>
+                                            </form>
+                                        </div>
                                     </div>
-                                    {% endif %}
+                                </div>
 
-                                    <form method="post" id="form-promocion">
-                                        {% csrf_token %}
-                                        <div class="mb-3">
-                                            <label class="form-label" for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
-                                            {{ form.nombre }}
-                                            {% for error in form.nombre.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label" for="{{ form.descripcion.id_for_label }}">{{ form.descripcion.label }}</label>
-                                            {{ form.descripcion }}
-                                            {% for error in form.descripcion.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-                                        </div>
+                                <div class="col-lg-5">
+                                    <div class="mt-4 mb-2 text-muted small text-center">Vista previa</div>
+                                    <div id="vista-previa">
+                                        <div class="rounded-4 p-3 p-sm-4 mb-3 text-white" style="background: {{ negocio.color_primario|default:'#405189' }};">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    {% if negocio.logo %}
+                                                    <img src="{{ negocio.logo.url }}" alt="{{ negocio.name }}" class="bg-white rounded p-1" style="max-height: 32px; max-width: 110px; object-fit: contain;">
+                                                    {% else %}
+                                                    <div class="fs-14 fw-bold">{{ negocio.name|default:"Rewards" }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="text-end">
+                                                    <div class="fs-10 text-white-50 text-uppercase">Vencimiento</div>
+                                                    <div class="fs-12 fw-semibold">Sin vencimiento</div>
+                                                </div>
+                                            </div>
 
-                                        <div class="mb-3">
-                                            <label class="form-label d-block">¿Cómo se acumulan los puntos?</label>
-                                            <div class="d-flex gap-3">
-                                                {% for radio in form.tipo_mecanica %}
-                                                <div class="form-check">
-                                                    {{ radio.tag }}
-                                                    <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                                            <div id="preview-visita" class="d-none d-flex flex-wrap gap-2 justify-content-center py-4">
+                                                {% for _ in "0123456789" %}
+                                                <div class="d-flex align-items-center justify-content-center rounded-circle" style="width: 34px; height: 34px;">
+                                                    <i class="ri-star-line text-white-50" style="font-size: 20px;"></i>
                                                 </div>
                                                 {% endfor %}
                                             </div>
-                                        </div>
-
-                                        <div id="campos-monto" class="border rounded p-3 mb-3">
-                                            <div class="mb-3">
-                                                <label class="form-label" for="{{ form.monto_base.id_for_label }}">{{ form.monto_base.label }}</label>
-                                                {{ form.monto_base }}
-                                                {% for error in form.monto_base.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-                                                <div class="form-text">Ej. 10.00 = cada $10 gastados otorgan los puntos de abajo.</div>
+                                            <div id="preview-monto" class="text-center py-4">
+                                                <div class="fs-28 fw-bold lh-1">0</div>
+                                                <div class="fs-11 text-white-50">puntos acumulados</div>
                                             </div>
-                                        </div>
 
-                                        <div class="mb-3">
-                                            <label class="form-label" for="{{ form.puntos_otorgados.id_for_label }}">{{ form.puntos_otorgados.label }}</label>
-                                            {{ form.puntos_otorgados }}
-                                            {% for error in form.puntos_otorgados.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label" for="{{ form.meta_puntos.id_for_label }}">{{ form.meta_puntos.label }}</label>
-                                            {{ form.meta_puntos }}
-                                            {% for error in form.meta_puntos.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label" for="{{ form.descripcion_premio.id_for_label }}">{{ form.descripcion_premio.label }}</label>
-                                            {{ form.descripcion_premio }}
-                                            {% for error in form.descripcion_premio.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-                                        </div>
-
-                                        <hr>
-                                        <div class="form-check form-switch mb-2">
-                                            {{ form.limitar_escaneos }}
-                                            <label class="form-check-label" for="{{ form.limitar_escaneos.id_for_label }}">{{ form.limitar_escaneos.label }}</label>
-                                        </div>
-                                        <div id="campos-restriccion" class="border rounded p-3 mb-3">
                                             <div class="mb-3">
-                                                <label class="form-label" for="{{ form.max_escaneos_dia.id_for_label }}">{{ form.max_escaneos_dia.label }}</label>
-                                                {{ form.max_escaneos_dia }}
+                                                <div class="fs-10 text-white-50 text-uppercase">Nombre</div>
+                                                <div class="fs-14 fw-semibold">Juan Pérez</div>
                                             </div>
-                                            <div class="mb-0">
-                                                <label class="form-label d-block">{{ form.alcance.label }}</label>
-                                                {% for radio in form.alcance %}
-                                                <div class="form-check">
-                                                    {{ radio.tag }}
-                                                    <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+
+                                            <div class="d-flex justify-content-center">
+                                                <div class="bg-white rounded p-2 d-flex align-items-center justify-content-center" style="width: 120px; height: 120px;">
+                                                    <i class="ri-qr-code-line text-dark" style="font-size: 60px;"></i>
                                                 </div>
-                                                {% endfor %}
                                             </div>
                                         </div>
-
-                                        <div class="form-check form-switch mb-3">
-                                            {{ form.activa }}
-                                            <label class="form-check-label" for="{{ form.activa.id_for_label }}">{{ form.activa.label }}</label>
-                                            <div class="form-text">Si la activas, cualquier otra promoción activa de este negocio se desactiva.</div>
-                                        </div>
-
-                                        <button type="submit" class="btn btn-primary w-100">Crear promoción</button>
-                                    </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -112,10 +221,17 @@
         const campoMonto = document.getElementById("campos-monto");
         const checkLimitar = document.getElementById("{{ form.limitar_escaneos.id_for_label }}");
         const campoRestriccion = document.getElementById("campos-restriccion");
+        const campoSello = document.getElementById("campo-sello-imagen");
+        const previewVisita = document.getElementById("preview-visita");
+        const previewMonto = document.getElementById("preview-monto");
 
         function actualizarTipo() {
             const seleccionado = document.querySelector('input[name="tipo_mecanica"]:checked');
+            const esVisita = seleccionado && seleccionado.value === "VISITA";
             campoMonto.classList.toggle("d-none", !seleccionado || seleccionado.value !== "MONTO");
+            campoSello.classList.toggle("d-none", !esVisita);
+            previewVisita.classList.toggle("d-none", !esVisita);
+            previewMonto.classList.toggle("d-none", esVisita);
         }
 
         function actualizarRestriccion() {
@@ -126,6 +242,41 @@
         checkLimitar.addEventListener("change", actualizarRestriccion);
         actualizarTipo();
         actualizarRestriccion();
+
+        // --- Vista previa del fondo ---
+        const radiosFondo = document.querySelectorAll('input[name="estilo_fondo"]');
+        const preview = document.getElementById("vista-previa").firstElementChild;
+        const campoColor = document.getElementById("campo-color-personalizado");
+        const inputColor = document.getElementById("{{ form.color_fondo.id_for_label }}");
+        const colorMarca = "{{ negocio.color_primario|default:'#405189' }}";
+
+        function actualizarPreviewFondo() {
+            const seleccionado = document.querySelector('input[name="estilo_fondo"]:checked');
+            if (!seleccionado) return;
+            const esPersonalizado = seleccionado.value === "personalizado";
+            campoColor.classList.toggle("d-none", !esPersonalizado);
+            const css = esPersonalizado ? (inputColor.value || colorMarca) : seleccionado.dataset.css;
+            preview.style.background = css;
+        }
+
+        radiosFondo.forEach((radio) => radio.addEventListener("change", actualizarPreviewFondo));
+        inputColor.addEventListener("input", actualizarPreviewFondo);
+        actualizarPreviewFondo();
+
+        const inputSello = document.getElementById("{{ form.sello_imagen.id_for_label }}");
+        if (inputSello) {
+            inputSello.addEventListener("change", () => {
+                const archivo = inputSello.files[0];
+                if (!archivo) return;
+                const lector = new FileReader();
+                lector.onload = (evento) => {
+                    previewVisita.querySelectorAll("div > i").forEach((icono) => {
+                        icono.outerHTML = `<img src="${evento.target.result}" alt="" style="width:22px;height:22px;object-fit:contain;">`;
+                    });
+                };
+                lector.readAsDataURL(archivo);
+            });
+        }
     })();
 </script>
 {% endblock extra_js %}

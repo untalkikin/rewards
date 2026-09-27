@@ -1,5 +1,5 @@
 <div class="rounded-4 p-3 p-sm-4 mb-3 text-white"
-     style="background: {{ tarjeta.fondo_css|default:negocio.color_primario|default:"#405189" }};">
+     style="background: {{ promocion.fondo_css|default:negocio.color_primario|default:"#405189" }};">
     <div class="d-flex justify-content-between align-items-start">
         <div>
             {% if negocio.logo %}
@@ -20,8 +20,8 @@
     <div class="d-flex flex-wrap gap-2 justify-content-center py-4">
         {% for llena in casillas %}
         <div class="d-flex align-items-center justify-content-center rounded-circle {% if llena %}bg-white bg-opacity-25 js-sello-llena{% endif %}" style="width: 34px; height: 34px;">
-            {% if llena and tarjeta.sello_imagen %}
-            <img src="{{ tarjeta.sello_imagen.url }}" alt="" style="width: 22px; height: 22px; object-fit: contain;">
+            {% if llena and promocion.sello_imagen %}
+            <img src="{{ promocion.sello_imagen.url }}" alt="" style="width: 22px; height: 22px; object-fit: contain;">
             {% elif llena %}
             <i class="ri-star-fill" style="font-size: 20px;"></i>
             {% else %}
