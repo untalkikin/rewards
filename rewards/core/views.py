@@ -1,4 +1,6 @@
 from datetime import timedelta
+from django import forms
+from stores.access import staff_store
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Sum
@@ -28,7 +30,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         return context
 
     def _dueno_context(self):
-        store = Store.objects.first()
+        store = staff_store(self.request)
         compras_qs = Compra.objects.filter(sucursal__store=store)
         visitas_qs = Visita.objects.filter(sucursal__store=store)
         canjes_qs = Canje.objects.filter(sucursal__store=store)
@@ -40,7 +42,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             "ingresos": compras_qs.aggregate(t=Sum("monto"))["t"] or 0,
             "puntos_otorgados": puntos_compras + puntos_visitas,
             "puntos_canjeados": canjes_qs.aggregate(t=Sum("puntos_consumidos"))["t"] or 0,
-            "total_clientes": Costumer.objects.count(),
+            "total_clientes": Costumer.objects.filter(store=store).count(),
         }
 
         dias = [
@@ -49,7 +51,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ]
         movimientos_qs = MovimientoPuntos.objects.filter(
             tipo=TipoMovimiento.ACUMULACION,
-            tarjeta__costumer__isnull=False,
+            tarjeta__costumer__store=store,
         )
         serie = []
         for dia in dias:
@@ -57,7 +59,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             serie.append(pts)
 
         actividad = list(
-            MovimientoPuntos.objects.select_related(
+            MovimientoPuntos.objects.filter(tarjeta__costumer__store=store).select_related(
                 "tarjeta__costumer",
                 "compra__sucursal", "compra__cajero",
                 "visita__sucursal", "visita__cajero",
@@ -84,31 +86,44 @@ class ReportesView(DuenoRequiredMixin, TemplateView):
         desde = self.request.GET.get("desde") or ""
         hasta = self.request.GET.get("hasta") or ""
 
-        compras_qs = Compra.objects.all()
-        canjes_qs = Canje.objects.all()
+        store = staff_store(self.request)
+        periodo = PeriodoForm(self.request.GET)
+        if periodo.is_valid():
+            desde = periodo.cleaned_data.get("desde")
+            hasta = periodo.cleaned_data.get("hasta")
+        else:
+            desde = hasta = None
+        context["periodo"] = periodo
+        compras_qs = Compra.objects.filter(sucursal__store=store)
+        visitas_qs = Visita.objects.filter(sucursal__store=store)
+        canjes_qs = Canje.objects.filter(sucursal__store=store)
         if desde:
+            visitas_qs = visitas_qs.filter(fecha__date__gte=desde)
             compras_qs = compras_qs.filter(fecha__date__gte=desde)
             canjes_qs = canjes_qs.filter(fecha__date__gte=desde)
         if hasta:
+            visitas_qs = visitas_qs.filter(fecha__date__lte=hasta)
             compras_qs = compras_qs.filter(fecha__date__lte=hasta)
             canjes_qs = canjes_qs.filter(fecha__date__lte=hasta)
 
         filas = []
-        for sucursal in Sucursal.objects.select_related("store"):
+        for sucursal in Sucursal.objects.filter(store=store).select_related("store"):
             compras_sucursal = compras_qs.filter(sucursal=sucursal)
             canjes_sucursal = canjes_qs.filter(sucursal=sucursal)
+            visitas_sucursal = visitas_qs.filter(sucursal=sucursal)
             filas.append({
+                "num_visitas": visitas_sucursal.count(),
                 "sucursal": sucursal,
                 "num_compras": compras_sucursal.count(),
                 "monto_total": compras_sucursal.aggregate(t=Sum("monto"))["t"] or 0,
-                "puntos_otorgados": compras_sucursal.aggregate(t=Sum("puntos_otorgados"))["t"] or 0,
+                "puntos_otorgados": (compras_sucursal.aggregate(t=Sum("puntos_otorgados"))["t"] or 0) + (visitas_sucursal.aggregate(t=Sum("puntos_otorgados"))["t"] or 0),
                 "num_canjes": canjes_sucursal.count(),
                 "puntos_canjeados": canjes_sucursal.aggregate(t=Sum("puntos_consumidos"))["t"] or 0,
             })
 
         context["filas"] = filas
-        context["desde"] = desde
-        context["hasta"] = hasta
+        context["desde"] = desde.isoformat() if desde else ""
+        context["hasta"] = hasta.isoformat() if hasta else ""
         context["totales"] = {
             "num_compras": sum(f["num_compras"] for f in filas),
             "monto_total": sum(f["monto_total"] for f in filas),
@@ -117,3 +132,14 @@ class ReportesView(DuenoRequiredMixin, TemplateView):
             "puntos_canjeados": sum(f["puntos_canjeados"] for f in filas),
         }
         return context
+
+
+class PeriodoForm(forms.Form):
+    desde = forms.DateField(required=False)
+    hasta = forms.DateField(required=False)
+
+    def clean(self):
+        data = super().clean()
+        if data.get("desde") and data.get("hasta") and data["desde"] > data["hasta"]:
+            raise forms.ValidationError("La fecha inicial no puede ser posterior a la final.")
+        return data

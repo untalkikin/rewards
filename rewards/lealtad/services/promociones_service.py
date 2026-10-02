@@ -1,5 +1,12 @@
+from django.db.models import Q
+from django.utils import timezone
+
 from ..models import Promocion, TipoMecanica
 
+
+def promociones_vigentes(store):
+    now = timezone.now()
+    return Promocion.objects.filter(store=store, activa=True, vigente_desde__lte=now).filter(Q(vigente_hasta__isnull=True) | Q(vigente_hasta__gt=now))
 
 def promocion_vigente(store):
     """Lectura simple (sin locking) para mostrar progreso/UI. La ruta que
@@ -8,8 +15,7 @@ def promocion_vigente(store):
     if store is None:
         return None
     return (
-        Promocion.objects.select_related("restriccion")
-        .filter(store=store, activa=True)
+        promociones_vigentes(store).select_related("restriccion")
         .order_by("-vigente_desde")
         .first()
     )

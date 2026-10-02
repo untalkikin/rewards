@@ -1,52 +1,128 @@
-# Rewards
+# Rewards — lealtad y suscripciones SaaS
 
-> Nota: este README se completa en la Fase 6 (cómo correr, datos semilla, roles de
-> prueba, flujo de demo). Por ahora documenta lo que pide explícitamente la Fase 5:
-> las credenciales de Apple/Google Wallet.
+Aplicación Django 5.2 para varios negocios, cada uno con clientes, personal,
+sucursales, promociones, tarjetas privadas y reportes separados.
 
-## Wallets (Apple / Google)
+## Arranque local
 
-Ambas integraciones son **opcionales**: si faltan las variables de entorno
-correspondientes, los botones de "Añadir a Apple Wallet" / "Guardar en Google
-Wallet" simplemente no aparecen en la tarjeta del cliente (`/tarjeta/<codigo>/`),
-y sus endpoints devuelven un aviso (HTTP 501) en vez de romper la app.
+Desde la raíz del repositorio, en PowerShell:
 
-### Apple Wallet
+```powershell
+.\env\Scripts\Activate.ps1
+cd rewards
+$env:DJANGO_DEBUG = "1"
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8000
+```
 
-Requiere una cuenta de **Apple Developer** con un **Pass Type ID** creado en
-developer.apple.com, y sus certificados exportados a formato PEM.
+Para instalar en una máquina nueva, crea un entorno Python 3.12 y ejecuta
+`python -m pip install -r requirements.txt` dentro de esta carpeta.
+`.env.example` documenta las variables: no se carga automáticamente.
+Se incluye `start-local.ps1` en la raíz para iniciar el entorno local existente.
 
-| Variable | Qué es | Dónde conseguirla |
-|---|---|---|
-| `APPLE_WALLET_TEAM_ID` | Team ID de la cuenta de developer | Membership → Team ID en developer.apple.com |
-| `APPLE_WALLET_PASS_TYPE_ID` | Identificador del Pass Type (ej. `pass.com.tunegocio.rewards`) | Certificates, Identifiers & Profiles → Identifiers → Pass Type IDs |
-| `APPLE_WALLET_CERTIFICATE_PATH` | Ruta al certificado del pase, en PEM | Se genera un `.cer` desde el Pass Type ID y se convierte a PEM (`openssl x509 -inform DER -in cert.cer -out cert.pem`) |
-| `APPLE_WALLET_KEY_PATH` | Ruta a la llave privada del certificado, en PEM | Se exporta el `.p12` desde Keychain Access y se convierte (`openssl pkcs12 -in cert.p12 -out key.pem -nocerts`) |
-| `APPLE_WALLET_KEY_PASSWORD` | Password de la llave privada (si se le puso una al exportar) | La que hayas definido al exportar el `.p12` |
-| `APPLE_WALLET_WWDR_PATH` | Ruta al certificado intermedio Apple WWDR, en PEM | developer.apple.com/certificationauthority (convertir igual que el certificado del pase) |
+## Roles y datos existentes
 
-El pase se regenera bajo demanda en cada descarga (`GET /tarjeta/<codigo>/apple.pkpass`).
-La actualización automática de puntos vía APNs (push silencioso al pase ya instalado)
-queda para una fase futura.
+- El administrador de la plataforma (superusuario) usa `/admin/` para dar de
+  alta negocios, sucursales, usuarios, perfiles y planes. El admin global queda
+  reservado a superusuarios para evitar accesos entre negocios.
+- Cada perfil requiere un `store`; un cajero requiere además una sucursal del
+  mismo negocio. Los dueños entran por `/login/` y usan su panel.
+- El cliente selecciona negocio y accede con teléfono/PIN en `/mi-cuenta/login/`.
+  El mismo teléfono o correo puede existir en distintos negocios.
+- El código QR identifica una tarjeta; no concede acceso a su saldo/historial.
+  Tarjeta, QR y descargas de Wallet requieren sesión autorizada.
+- La migración conserva registros y asigna datos antiguos automáticamente solo
+  cuando existe un único negocio. Si hay varios y la titularidad es ambigua,
+  se detiene con un error para que el operador asigne los `store_id` correctos.
 
-### Google Wallet
+## Lealtad y reportes
 
-Requiere una **cuenta de servicio de Google Cloud** con acceso a la Google Wallet API,
-y el **Issuer ID** del programa de lealtad.
+La promoción debe estar activa y dentro de `[vigente_desde, vigente_hasta)`.
+Las compras acumulan por múltiplos de monto_base; las visitas otorgan puntos
+fijos. Los límites diarios y reportes usan DJANGO_TIME_ZONE (por defecto
+America/Mexico_City). Los reportes suman compras y visitas y validan fechas.
+Los canjes conservan la regla original: consumen todo el saldo, no solo la meta.
+Las operaciones usan transacciones y el saldo deriva de movimientos históricos.
 
-| Variable | Qué es | Dónde conseguirla |
-|---|---|---|
-| `GOOGLE_WALLET_ISSUER_ID` | ID del emisor del programa de lealtad | Google Wallet Business Console (pay.google.com/business/console) |
-| `GOOGLE_WALLET_SERVICE_ACCOUNT_FILE` | Ruta al JSON de la cuenta de servicio | Google Cloud Console → IAM → Cuentas de servicio → crear llave JSON. Esa cuenta de servicio debe estar vinculada como usuario en el Wallet Business Console. |
-| `GOOGLE_WALLET_CLASS_SUFFIX` | Opcional (default `rewards_loyalty_class`) | Sufijo con el que se arma el `classId` como `<issuer_id>.<sufijo>` |
+## Suscripción y Mercado Pago: preparación sin conexión
 
-El botón redirige a `pay.google.com/gp/v/save/<jwt>`, con la clase y el objeto de
-lealtad embebidos en el propio JWT firmado (no requiere pre-crear la clase por la
-REST API antes del primer uso).
+El dueño dispone de **Suscripción y pagos** en `/suscripcion/`:
 
-### Dónde poner las variables
+- Consulta estado, plan actual, vigencia, solicitudes e historial de pagos.
+- Guarda una solicitud local con precio y periodicidad congelados.
+- No se solicitan tarjetas, no se envía información a Mercado Pago y no se cobra.
+- Una solicitud no activa, cambia ni cancela una suscripción vigente.
+- Se incluye el plan inicial "Rewards SaaS", sin precio: el operador define su
+  tarifa en el admin. No se inventan precios comerciales.
 
-Cualquier mecanismo estándar de variables de entorno del sistema operativo o del
-proceso que corre Django (por ejemplo, exportarlas antes de `manage.py runserver`,
-o en la configuración del servicio en producción). El proyecto no usa un paquete
-tipo `django-environ`/`.env` todavía; si lo prefieres, se puede agregar en la Fase 6.
+`billing.providers.MercadoPagoProvider.subscription_payload()` prepara el contrato
+de creación de una suscripción mensual mediante `/preapproval`.
+`create_subscription()` falla explícitamente: no tiene transporte HTTP.
+Incluso con credenciales definidas, los cobros permanecen desconectados.
+`POST /suscripcion/webhook/` responde 503 y no acepta pagos ni activa cuentas.
+
+Para una integración real futura faltan la conexión autorizada al proveedor,
+validación de firmas de webhooks, consulta autenticada del recurso, conciliación
+idempotente de pagos, cancelaciones y pruebas en sandbox. Nunca activar una
+suscripción a partir de parámetros de retorno del navegador.
+Referencia: https://www.mercadopago.com.mx/developers/es/reference/online-payments/subscriptions/create-preapproval/post
+
+`BILLING_ENFORCE_SUBSCRIPTION=0` permite preparar la instancia sin bloquear a los
+usuarios existentes. Al habilitarlo, el personal necesita una suscripción ACTIVA
+o PRUEBA con fecha vigente; el dueño conserva acceso a su panel de suscripción.
+El administrador puede asignar periodos de prueba locales, sin registrarlos como pagos.
+
+## Wallets: emisión y actualización preparadas, deshabilitadas
+
+Apple requiere APPLE_WALLET_TEAM_ID, APPLE_WALLET_PASS_TYPE_ID,
+APPLE_WALLET_CERTIFICATE_PATH, APPLE_WALLET_KEY_PATH, APPLE_WALLET_WWDR_PATH
+y, si corresponde, APPLE_WALLET_KEY_PASSWORD. Los archivos son certificados PEM.
+Google requiere GOOGLE_WALLET_ISSUER_ID y GOOGLE_WALLET_SERVICE_ACCOUNT_FILE;
+GOOGLE_WALLET_CLASS_SUFFIX es opcional.
+
+Las credenciales no están incluidas. Los botones de emisión permanecen ocultos
+cuando faltan variables. Su presencia no prueba que las credenciales sean válidas.
+
+La actualización se prepara con:
+
+- Cola transaccional persistente para cambios de puntos, estado de tarjeta y promoción.
+- Registro y baja de dispositivos Apple, listado incremental de pases y descarga
+  autenticada por un token secreto distinto del código QR.
+- Transporte APNs mediante HTTP/2 y actualización de saldo/estado/color de Google
+  Wallet mediante OAuth y PATCH. Los fallos se conservan para reintento.
+
+`WALLET_SERVICE_URL` debe ser la URL HTTPS pública que termina en `/wallets/apple/`.
+Al configurarla, los nuevos pases Apple incluyen webServiceURL y authenticationToken.
+Los pases antiguos deben descargarse otra vez para registrar el dispositivo.
+
+```powershell
+python manage.py sync_wallets
+```
+
+El comando anterior solo muestra pendientes y no usa la red. Para enviar en un
+despliegue futuro se requieren credenciales, `WALLET_SYNC_ENABLED=1` y el argumento
+`--send`. Ejecutar con un solo trabajador periódico. No se instala ni se programa
+ningún trabajador por defecto. APNs requiere `httpx[http2]` de requirements.txt.
+Los endpoints Apple usan el protocolo oficial; el listado por device ID no lleva
+Authorization según ese protocolo, pero no devuelve saldos ni datos de clientes.
+Referencias:
+https://developer.apple.com/documentation/walletpasses/adding-a-web-service-to-update-passes
+https://developers.google.com/wallet/retail/loyalty-cards/use-cases/updates
+
+## Configuración y pruebas
+
+Fuera de desarrollo, DJANGO_DEBUG es falso y DJANGO_SECRET_KEY es obligatorio.
+Configura DJANGO_ALLOWED_HOSTS, DJANGO_CSRF_TRUSTED_ORIGINS y HTTPS. Las cookies
+seguras, redirección HTTPS y HSTS se activan en producción. La configuración de
+proxy/TLS debe adaptarse al despliegue. SQLite se mantiene para la instancia local;
+antes de producción concurrente, configura una base con bloqueos de fila y valida
+allí las operaciones simultáneas (SQLite no implementa select_for_update).
+
+```powershell
+python manage.py test --settings=rewards.test_settings
+python manage.py makemigrations --check --dry-run
+python manage.py check
+```
+
+Las pruebas usan una base en memoria e integraciones simuladas. No validan cuentas,
+certificados, pases instalados ni cobros reales. No se han conectado proveedores.

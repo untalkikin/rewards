@@ -3,6 +3,10 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
+from django.utils.decorators import method_decorator
+from .access import card_access
+from stores.access import staff_store
+from django.db import transaction
 from django.views.generic import DetailView, ListView
 
 from cuentas.mixins import DuenoRequiredMixin
@@ -19,9 +23,9 @@ _apple_wallet = AppleWalletProvider()
 _google_wallet = GoogleWalletProvider()
 
 
+@method_decorator(card_access, name="dispatch")
 class TarjetaDetailView(DetailView):
-    """Panel del cliente: público (sin login), accesible solo con el código
-    único e inmutable de la tarjeta -- el mismo que va codificado en el QR."""
+    """Tarjeta privada: requiere sesión del titular o del personal de su negocio."""
 
     model = TarjetaLealtad
     template_name = "lealtad/tarjeta_detail.html"
@@ -37,8 +41,9 @@ class TarjetaDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         tarjeta = self.object
-        # Despliegue de un solo negocio: se toma la promoción vigente del único Store.
-        promocion = promocion_vigente(Store.objects.first())
+        # La promoción y la marca pertenecen al negocio de la tarjeta.
+        promocion = promocion_vigente(tarjeta.costumer.store)
+        context["negocio"] = tarjeta.costumer.store
         context["historial"] = tarjeta.movimientos.all()[:20]
         context["promocion"] = promocion
         context["progreso"] = _progreso(tarjeta, promocion)
@@ -54,6 +59,7 @@ def _progreso(tarjeta, promocion):
     return max(0, min(100, int(tarjeta.saldo * 100 / promocion.meta_puntos)))
 
 
+@card_access
 def tarjeta_qr_view(request, codigo):
     tarjeta = get_object_or_404(TarjetaLealtad, costumer__card_code=codigo)
     url = request.build_absolute_uri(
@@ -67,6 +73,7 @@ def _tarjeta_activa(codigo):
     return get_object_or_404(TarjetaLealtad, costumer__card_code=codigo, activa=True)
 
 
+@card_access
 def tarjeta_apple_wallet_view(request, codigo):
     tarjeta = _tarjeta_activa(codigo)
     if not _apple_wallet.is_configured():
@@ -81,6 +88,7 @@ def tarjeta_apple_wallet_view(request, codigo):
     return response
 
 
+@card_access
 def tarjeta_google_wallet_view(request, codigo):
     tarjeta = _tarjeta_activa(codigo)
     if not _google_wallet.is_configured():
@@ -102,7 +110,7 @@ class PromocionListView(DuenoRequiredMixin, ListView):
 
     def get_queryset(self):
         return (
-            Promocion.objects.filter(store=Store.objects.first())
+            Promocion.objects.filter(store=staff_store(self.request))
             .select_related("restriccion")
             .order_by("-activa", "-vigente_desde")
         )
@@ -120,7 +128,7 @@ class PromocionCreateView(DuenoRequiredMixin, View):
     def post(self, request):
         form = PromocionForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save(store=Store.objects.first())
+            form.save(store=staff_store(self.request))
             messages.success(request, "Promoción creada correctamente.")
             return redirect("lealtad:promocion_list")
         return render(request, self.template_name, {"form": form, "estilos_fondo": ESTILOS_FONDO})
@@ -130,8 +138,10 @@ class PromocionActivarView(DuenoRequiredMixin, View):
     """Activa una promoción y desactiva cualquier otra del mismo negocio
     (solo una promoción puede estar vigente a la vez)."""
 
+    @transaction.atomic
     def post(self, request, pk):
-        promocion = get_object_or_404(Promocion, pk=pk)
+        Store.objects.select_for_update().get(pk=staff_store(request).pk)
+        promocion = get_object_or_404(Promocion, pk=pk, store=staff_store(request))
         Promocion.objects.filter(store=promocion.store, activa=True).update(activa=False)
         promocion.activa = True
         promocion.save(update_fields=["activa"])

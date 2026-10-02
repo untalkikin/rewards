@@ -14,6 +14,13 @@ def get_code():
 
 
 class Costumer(ModelClass):
+    store = models.ForeignKey("stores.Store", on_delete=models.PROTECT, related_name="clientes")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["store", "telefono"], name="cliente_telefono_por_negocio"),
+            models.UniqueConstraint(fields=["store", "email"], name="cliente_email_por_negocio"),
+        ]
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -21,13 +28,10 @@ class Costumer(ModelClass):
     )
 
     telefono = models.CharField(
-        max_length=30,
-        unique=True
+        max_length=30
     )
 
-    email = models.EmailField(
-        unique=True
-    )
+    email = models.EmailField()
 
     card_code = models.CharField(
         max_length=64,
@@ -38,7 +42,7 @@ class Costumer(ModelClass):
     pin = models.CharField(
         max_length=128,
         blank=True,
-        help_text="PIN hasheado para el login del cliente (card_code + PIN). Nunca se guarda en texto plano.",
+        help_text="PIN hasheado para el login del cliente (negocio + teléfono + PIN). Nunca se guarda en texto plano.",
     )
 
     def set_pin(self, raw_pin):

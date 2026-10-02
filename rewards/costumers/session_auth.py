@@ -1,4 +1,4 @@
-"""Autenticación del cliente por sesión (card_code + PIN), independiente
+"""Autenticación del cliente por sesión (negocio + teléfono + PIN), independiente
 del sistema de auth de Django (que es para el personal: cajero/dueño).
 El cliente no tiene User ni password; solo su Costumer con un PIN hasheado.
 """
@@ -12,6 +12,7 @@ SESSION_KEY = "costumer_id"
 
 
 def login_costumer(request, costumer):
+    request.session.cycle_key()
     request.session[SESSION_KEY] = str(costumer.pk)
 
 
@@ -23,7 +24,7 @@ def get_current_costumer(request):
     costumer_id = request.session.get(SESSION_KEY)
     if not costumer_id:
         return None
-    return Costumer.objects.filter(pk=costumer_id).first()
+    return Costumer.objects.filter(pk=costumer_id, store__isnull=False, tarjeta__activa=True).first()
 
 
 class ClienteRequiredMixin:

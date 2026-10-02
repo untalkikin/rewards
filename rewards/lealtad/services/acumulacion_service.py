@@ -5,6 +5,9 @@ puntos, registrar el evento, escribir el ledger) y solo el cálculo de
 puntos y el tipo de evento creado varían según la mecánica (Strategy)."""
 
 from django.db import transaction
+from .promociones_service import promociones_vigentes
+from .access import validar_operacion
+from ..models import TarjetaLealtad
 
 from ..models import MovimientoPuntos, Promocion, TipoMovimiento, Visita
 from .exceptions import SinPromocionVigente
@@ -14,10 +17,11 @@ from .restricciones import restricciones_de
 
 @transaction.atomic
 def registrar_evento(*, costumer, sucursal, cajero, monto=None, referencia=""):
+    tarjeta = TarjetaLealtad.objects.select_for_update().select_related("costumer").get(pk=costumer.pk)
+    validar_operacion(tarjeta, sucursal, cajero)
     promocion = (
-        Promocion.objects.select_for_update()
+        promociones_vigentes(sucursal.store).select_for_update()
         .select_related("restriccion")
-        .filter(store=sucursal.store, activa=True)
         .order_by("-vigente_desde")
         .first()
     )
@@ -31,7 +35,6 @@ def registrar_evento(*, costumer, sucursal, cajero, monto=None, referencia=""):
 
     mecanica = obtener_mecanica(promocion.tipo_mecanica)
     puntos = mecanica.calcular_puntos(promocion, monto=monto)
-    tarjeta = costumer.tarjeta
 
     if mecanica.requiere_monto():
         from compras.models import Compra

@@ -9,9 +9,7 @@ from .base import PaseResult, WalletProvider
 
 
 class AppleWalletProvider(WalletProvider):
-    """Genera un pase tipo 'store card' (.pkpass) con el saldo y el QR de
-    la tarjeta. La actualización automática vía APNs queda para una fase
-    futura; por ahora el pase se (re)genera bajo demanda en cada descarga."""
+    """Genera un pase con saldo/QR y, cuando se configura, servicio de actualizaciones."""
 
     def is_configured(self) -> bool:
         return bool(
@@ -26,7 +24,7 @@ class AppleWalletProvider(WalletProvider):
         from lealtad.services.promociones_service import promocion_vigente
         from stores.models import Store
 
-        negocio = Store.objects.first()
+        negocio = tarjeta.costumer.store
         promocion = promocion_vigente(negocio)
         nombre_negocio = negocio.name if negocio else "Rewards"
 
@@ -43,6 +41,12 @@ class AppleWalletProvider(WalletProvider):
             organizationName=nombre_negocio,
             teamIdentifier=settings.APPLE_WALLET_TEAM_ID,
         )
+        from wallets.models import WalletIdentity
+        identity, _ = WalletIdentity.objects.get_or_create(tarjeta=tarjeta)
+        if settings.WALLET_SERVICE_URL:
+            passfile.webServiceURL = settings.WALLET_SERVICE_URL.rstrip("/") + "/"
+            passfile.authenticationToken = identity.token
+        passfile.voided = not tarjeta.activa
         passfile.serialNumber = tarjeta.codigo
         passfile.description = f"Tarjeta de lealtad - {nombre_negocio}"
         # Apple Wallet solo soporta un color plano (nada de degradados): si

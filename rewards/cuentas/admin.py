@@ -4,6 +4,6 @@ from .models import Perfil
 
 @admin.register(Perfil)
 class PerfilAdmin(admin.ModelAdmin):
-    list_display = ("user", "rol", "sucursal", "activo")
+    list_display = ("user", "store", "rol", "sucursal", "activo")
     list_filter = ("rol", "sucursal", "activo")
     search_fields = ("user__username", "user__email")

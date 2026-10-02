@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+from stores.access import staff_store
 from django.views import View
 
 from cuentas.mixins import StaffRequiredMixin
@@ -29,10 +31,10 @@ class RegistrarClienteView(StaffRequiredMixin, View):
     template_name = "costumers/registrar.html"
 
     def get(self, request):
-        return render(request, self.template_name, {"form": RegistrarClienteForm()})
+        return render(request, self.template_name, {"form": RegistrarClienteForm(store=staff_store(request))})
 
     def post(self, request):
-        form = RegistrarClienteForm(request.POST)
+        form = RegistrarClienteForm(request.POST, store=staff_store(request))
         if form.is_valid():
             costumer = form.save()
             messages.success(request, f"Cliente {costumer.nombre} registrado correctamente.")
@@ -47,7 +49,7 @@ class ClienteRegistradoView(StaffRequiredMixin, View):
     template_name = "costumers/registrado.html"
 
     def get(self, request, codigo):
-        costumer = get_object_or_404(Costumer, card_code=codigo)
+        costumer = get_object_or_404(Costumer, card_code=codigo, store=staff_store(request))
         return render(request, self.template_name, {
             "costumer": costumer,
             "tarjeta": costumer.tarjeta,
@@ -92,10 +94,12 @@ class ClienteLoginView(View):
         if form.is_valid():
             telefono = form.cleaned_data["telefono"].strip()
             pin = form.cleaned_data["pin"]
-            costumer = Costumer.objects.filter(telefono=telefono).first()
-            if costumer and costumer.check_pin(pin):
+            costumer = Costumer.objects.filter(telefono=telefono, store=form.cleaned_data["store"]).first()
+            if costumer and costumer.tarjeta.activa and costumer.check_pin(pin):
                 login_costumer(request, costumer)
                 next_url = request.GET.get("next") or reverse("costumers:mi_cuenta")
+                if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+                    next_url = reverse("costumers:mi_cuenta")
                 return redirect(next_url)
             form.add_error(None, "Teléfono o PIN incorrectos.")
         return render(request, self.template_name, {"form": form})
@@ -117,8 +121,9 @@ class MiCuentaView(ClienteRequiredMixin, View):
     def get(self, request):
         costumer = request.costumer
         tarjeta = costumer.tarjeta
-        promocion = promocion_vigente(Store.objects.first())
+        promocion = promocion_vigente(costumer.store)
         context = {
+            "negocio": costumer.store,
             "costumer": costumer,
             "tarjeta": tarjeta,
             "historial": tarjeta.movimientos.all()[:20],

@@ -25,7 +25,7 @@ class GoogleWalletProvider(WalletProvider):
         from lealtad.services.promociones_service import promocion_vigente
         from stores.models import Store
 
-        negocio = Store.objects.first()
+        negocio = tarjeta.costumer.store
         promocion = promocion_vigente(negocio)
         nombre_negocio = negocio.name if negocio else "Rewards"
 
@@ -80,6 +80,8 @@ class GoogleWalletProvider(WalletProvider):
             },
         }
         token = jwt.encode(payload, private_key, algorithm="RS256")
+        from wallets.models import WalletIdentity
+        WalletIdentity.objects.update_or_create(tarjeta=tarjeta, defaults={"google_requested": True})
         return PaseResult(kind="redirect", url=self.SAVE_URL.format(token=token))
 
 

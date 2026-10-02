@@ -21,12 +21,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-s0mxra=0qy9eifv-rod@7=vfak87-ig=suz+jdbg3s_7^tl$ic'
+DEBUG = os.environ.get('DJANGO_DEBUG', '0') == '1'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'development-only-not-for-production'
+    else:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured('Configura DJANGO_SECRET_KEY o DJANGO_DEBUG=1 para desarrollo.')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = []
+
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
 
 
 # Application definition
@@ -46,6 +53,8 @@ INSTALLED_APPS = [
     'lealtad',
     'compras',
     'core',
+    'billing',
+    'wallets',
 ]
 
 MIDDLEWARE = [
@@ -54,6 +63,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'billing.middleware.SubscriptionMiddleware',
     'django_userforeignkey.middleware.UserForeignKeyMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -113,9 +123,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-mx'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = os.environ.get('DJANGO_TIME_ZONE', 'America/Mexico_City')
 
 USE_I18N = True
 
@@ -159,3 +169,23 @@ APPLE_WALLET_WWDR_PATH = os.environ.get('APPLE_WALLET_WWDR_PATH', '')
 GOOGLE_WALLET_ISSUER_ID = os.environ.get('GOOGLE_WALLET_ISSUER_ID', '')
 GOOGLE_WALLET_SERVICE_ACCOUNT_FILE = os.environ.get('GOOGLE_WALLET_SERVICE_ACCOUNT_FILE', '')
 GOOGLE_WALLET_CLASS_SUFFIX = os.environ.get('GOOGLE_WALLET_CLASS_SUFFIX', 'rewards_loyalty_class')
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_REFERRER_POLICY = "same-origin"
+CSRF_TRUSTED_ORIGINS = [x.strip() for x in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if x.strip()]
+# Offline preparation only. No payment network transport is enabled.
+MERCADOPAGO_ACCESS_TOKEN = os.environ.get("MERCADOPAGO_ACCESS_TOKEN", "")
+MERCADOPAGO_WEBHOOK_SECRET = os.environ.get("MERCADOPAGO_WEBHOOK_SECRET", "")
+BILLING_ENFORCE_SUBSCRIPTION = os.environ.get("BILLING_ENFORCE_SUBSCRIPTION", "0") == "1"
+
+WALLET_SYNC_ENABLED = os.environ.get("WALLET_SYNC_ENABLED", "0") == "1"
+WALLET_SERVICE_URL = os.environ.get("WALLET_SERVICE_URL", "")
+if WALLET_SERVICE_URL and not WALLET_SERVICE_URL.startswith("https://"):
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("WALLET_SERVICE_URL debe usar HTTPS.")

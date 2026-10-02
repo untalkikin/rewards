@@ -4,6 +4,6 @@ from .models import Costumer
 
 @admin.register(Costumer)
 class CostumerAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "telefono", "email", "card_code", "tiene_pin")
+    list_display = ("nombre", "store", "telefono", "email", "card_code", "tiene_pin")
     search_fields = ("nombre", "telefono", "email", "card_code")
     readonly_fields = ("card_code", "pin")

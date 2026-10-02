@@ -1,4 +1,6 @@
 from django import forms
+from django.db import transaction
+from stores.models import Store
 from django.utils import timezone
 
 from .models import (
@@ -72,9 +74,16 @@ class PromocionForm(forms.ModelForm):
             self.add_error("monto_base", "Requerido para promociones por monto de compra.")
         if cleaned.get("estilo_fondo") == ESTILO_FONDO_PERSONALIZADO and not cleaned.get("color_fondo"):
             self.add_error("color_fondo", "Elige un color para la opción 'Color personalizado'.")
+        for field in ("puntos_otorgados", "meta_puntos"):
+            if cleaned.get(field) is not None and cleaned[field] <= 0:
+                self.add_error(field, "Debe ser mayor que cero.")
+        if cleaned.get("monto_base") is not None and cleaned["monto_base"] <= 0:
+            self.add_error("monto_base", "Debe ser mayor que cero.")
         return cleaned
 
+    @transaction.atomic
     def save(self, *, store, commit=True):
+        Store.objects.select_for_update().get(pk=store.pk)
         promocion = super().save(commit=False)
         promocion.store = store
         promocion.vigente_desde = timezone.now()

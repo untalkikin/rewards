@@ -29,6 +29,7 @@ class RestriccionMaxEscaneosDia(Restriccion):
         hoy = timezone.localdate()
         qs = MovimientoPuntos.objects.filter(
             tarjeta=costumer.tarjeta,
+            tarjeta__costumer__store=sucursal.store,
             tipo=TipoMovimiento.ACUMULACION,
             fecha__date=hoy,
         )

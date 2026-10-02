@@ -16,6 +16,7 @@
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-body">
+                                    {{ periodo.errors }}
                                     <form method="get" class="row g-3 align-items-end">
                                         <div class="col-auto">
                                             <label class="form-label">Desde</label>
@@ -80,7 +81,7 @@
                                             <thead>
                                                 <tr>
                                                     <th>Sucursal</th>
-                                                    <th class="text-end">Compras</th>
+                                                    <th class="text-end">Compras</th><th class="text-end">Visitas</th>
                                                     <th class="text-end">Monto</th>
                                                     <th class="text-end">Puntos otorgados</th>
                                                     <th class="text-end">Canjes</th>
@@ -91,7 +92,7 @@
                                                 {% for fila in filas %}
                                                 <tr>
                                                     <td>{{ fila.sucursal.nombre }}</td>
-                                                    <td class="text-end">{{ fila.num_compras }}</td>
+                                                    <td class="text-end">{{ fila.num_compras }}</td><td class="text-end">{{ fila.num_visitas }}</td>
                                                     <td class="text-end">${{ fila.monto_total }}</td>
                                                     <td class="text-end text-success">+{{ fila.puntos_otorgados }}</td>
                                                     <td class="text-end">{{ fila.num_canjes }}</td>
@@ -99,7 +100,7 @@
                                                 </tr>
                                                 {% empty %}
                                                 <tr>
-                                                    <td colspan="6" class="text-center text-muted">No hay sucursales todavía.</td>
+                                                    <td colspan="7" class="text-center text-muted">No hay sucursales todavía.</td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>

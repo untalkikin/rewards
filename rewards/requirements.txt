@@ -5,3 +5,5 @@ qrcode==8.0
 py-pkpass==1.0.2
 cryptography==50.0.1
 PyJWT==2.13.0
+
+httpx[http2]>=0.28,<1

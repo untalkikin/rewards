@@ -53,6 +53,7 @@
 
                                 <form method="post">
                                     {% csrf_token %}
+<div class="mb-3">{{ form.store.label_tag }} {{ form.store }} {{ form.store.errors }}</div>
                                     <div class="mb-3">
                                         <label class="form-label" for="{{ form.telefono.id_for_label }}">{{ form.telefono.label }}</label>
                                         {{ form.telefono }}

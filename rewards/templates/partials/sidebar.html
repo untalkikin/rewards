@@ -45,6 +45,7 @@
 
             <div id="scrollbar">
                 <div class="container-fluid">
+                    <div id="two-column-menu"></div>
                     <ul class="navbar-nav" id="navbar-nav">
                         <li class="menu-title"><span data-key="t-menu">Menú</span></li>
                         <li class="nav-item">
@@ -67,6 +68,7 @@
                         </li>
                         {% endif %}
                         {% if request.user.perfil.rol == "DUENO" %}
+                        <li class="nav-item"><a href="{% url 'billing:panel' %}" class="nav-link menu-link"><i data-feather="credit-card" class="icon-dual"></i><span>Suscripción y pagos</span></a></li>
                         <li class="nav-item">
                             <a href="{% url 'lealtad:promocion_list' %}" class="nav-link menu-link">
                                 <i data-feather="gift" class="icon-dual"></i> <span>Promociones</span>

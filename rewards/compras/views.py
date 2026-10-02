@@ -10,6 +10,8 @@ from lealtad.services.canje_service import SaldoInsuficiente, efectuar_canje
 from lealtad.services.exceptions import RestriccionNoCumplida, SinPromocionVigente
 from lealtad.services.promociones_service import casillas_de, promocion_vigente
 
+from stores.access import staff_store
+
 from .forms import BuscarClienteForm, RegistrarCompraForm
 
 
@@ -23,7 +25,7 @@ class BuscarClienteView(CajeroRequiredMixin, View):
         form = BuscarClienteForm(request.POST)
         if form.is_valid():
             codigo = form.cleaned_data["codigo"].strip()
-            if Costumer.objects.filter(card_code=codigo).exists():
+            if Costumer.objects.filter(card_code=codigo, store=staff_store(request), tarjeta__activa=True).exists():
                 return redirect("compras:cliente_detail", codigo=codigo)
             form.add_error("codigo", "No se encontró ningún cliente con ese código.")
         return render(request, self.template_name, {"form": form})
@@ -33,14 +35,14 @@ class ClienteCajeroView(CajeroRequiredMixin, View):
     template_name = "compras/cliente_detail.html"
 
     def get(self, request, codigo):
-        costumer = get_object_or_404(Costumer, card_code=codigo)
+        costumer = get_object_or_404(Costumer, card_code=codigo, store=staff_store(request), tarjeta__activa=True)
         context = self._context(costumer, request.user.perfil)
         if context["promocion"] and context["promocion"].tipo_mecanica == TipoMecanica.MONTO:
             context["form"] = RegistrarCompraForm()
         return render(request, self.template_name, context)
 
     def post(self, request, codigo):
-        costumer = get_object_or_404(Costumer, card_code=codigo)
+        costumer = get_object_or_404(Costumer, card_code=codigo, store=staff_store(request), tarjeta__activa=True)
         perfil = request.user.perfil
 
         if not perfil.sucursal:
@@ -94,7 +96,7 @@ class CanjeConfirmView(CajeroRequiredMixin, View):
     template_name = "compras/canje_confirm.html"
 
     def get(self, request, codigo):
-        costumer = get_object_or_404(Costumer, card_code=codigo)
+        costumer = get_object_or_404(Costumer, card_code=codigo, store=staff_store(request), tarjeta__activa=True)
         tarjeta = costumer.tarjeta
         perfil = request.user.perfil
         promocion = promocion_vigente(perfil.sucursal.store) if perfil.sucursal else None
@@ -105,7 +107,7 @@ class CanjeConfirmView(CajeroRequiredMixin, View):
         })
 
     def post(self, request, codigo):
-        costumer = get_object_or_404(Costumer, card_code=codigo)
+        costumer = get_object_or_404(Costumer, card_code=codigo, store=staff_store(request), tarjeta__activa=True)
         tarjeta = costumer.tarjeta
         perfil = request.user.perfil
 

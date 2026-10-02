@@ -13,6 +13,17 @@ class Perfil(models.Model):
     """Extiende AUTH_USER_MODEL con el rol dentro del negocio. Un cajero
     queda ligado a la sucursal donde opera; un dueño no requiere sucursal."""
 
+    store = models.ForeignKey("stores.Store", on_delete=models.PROTECT, related_name="perfiles")
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if not self.store_id:
+            raise ValidationError({"store": "Asigna un negocio al perfil."})
+        if self.rol == Rol.CAJERO and not self.sucursal_id:
+            raise ValidationError({"sucursal": "El cajero requiere una sucursal."})
+        if self.sucursal_id and self.sucursal.store_id != self.store_id:
+            raise ValidationError({"sucursal": "La sucursal debe pertenecer al negocio del perfil."})
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
