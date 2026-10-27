@@ -73,7 +73,7 @@
 
                                 <div class="mt-3 text-center">
                                     <p class="text-muted mb-1">¿Aún no tienes tarjeta?</p>
-                                    <a href="{% url 'costumers:registro' %}" class="btn btn-outline-primary w-100">
+                                    <a href="{% url 'costumers:mi_cuenta' %}" class="btn btn-outline-primary w-100">
                                         <i class="ri-user-add-line align-middle me-1"></i> Crear mi tarjeta
                                     </a>
                                 </div>
@@ -103,5 +103,21 @@
     <script src="{% static 'js/plugins.js'%}"></script>
     <script src="{% static 'libs/particles.js/particles.js'%}"></script>
     <script src="{% static 'js/pages/particles.app.js'%}"></script>
+
+    {{ store_banners|json_script:"store-banners-data" }}
+    <script>
+        (function () {
+            var bannerPorNegocio = JSON.parse(document.getElementById("store-banners-data").textContent);
+            var defaultBg = "{% static 'images/auth-one-bg.jpg' %}";
+            var fondo = document.getElementById("auth-particles");
+            var selectorNegocio = document.getElementById("{{ form.store.id_for_label }}");
+            if (selectorNegocio && fondo) {
+                selectorNegocio.addEventListener("change", function () {
+                    var url = bannerPorNegocio[this.value];
+                    fondo.style.backgroundImage = "url('" + (url || defaultBg) + "')";
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

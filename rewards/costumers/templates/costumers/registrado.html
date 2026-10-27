@@ -27,6 +27,21 @@
                                         definiste.
                                     </p>
 
+                                    {% if apple_wallet_disponible or google_wallet_disponible %}
+                                    <div class="d-flex flex-column gap-2 mt-3">
+                                        {% if apple_wallet_disponible %}
+                                        <a href="{% url 'lealtad:tarjeta_apple' costumer.card_code %}" class="btn btn-dark">
+                                            <i class="ri-apple-fill align-middle me-1"></i> Añadir a Apple Wallet
+                                        </a>
+                                        {% endif %}
+                                        {% if google_wallet_disponible %}
+                                        <a href="{% url 'lealtad:tarjeta_google' costumer.card_code %}" class="btn btn-outline-secondary">
+                                            <i class="ri-google-fill align-middle me-1"></i> Guardar en Google Wallet
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+
                                     <div class="d-flex gap-2 justify-content-center mt-3">
                                         <a href="{% url 'costumers:registrar' %}" class="btn btn-primary">Registrar otro cliente</a>
                                         <a href="{% url 'compras:buscar_cliente' %}" class="btn btn-outline-secondary">Ir a buscar cliente</a>

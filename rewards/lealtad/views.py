@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.utils.decorators import method_decorator
 from .access import card_access
@@ -123,7 +124,8 @@ class PromocionCreateView(DuenoRequiredMixin, View):
     template_name = "lealtad/promocion_form.html"
 
     def get(self, request):
-        return render(request, self.template_name, {"form": PromocionForm(), "estilos_fondo": ESTILOS_FONDO})
+        form = PromocionForm(initial={"vigente_desde": timezone.localdate()})
+        return render(request, self.template_name, {"form": form, "estilos_fondo": ESTILOS_FONDO})
 
     def post(self, request):
         form = PromocionForm(request.POST, request.FILES)
@@ -132,6 +134,31 @@ class PromocionCreateView(DuenoRequiredMixin, View):
             messages.success(request, "Promoción creada correctamente.")
             return redirect("lealtad:promocion_list")
         return render(request, self.template_name, {"form": form, "estilos_fondo": ESTILOS_FONDO})
+
+
+class PromocionUpdateView(DuenoRequiredMixin, View):
+    """El dueño edita una promoción existente: puede cambiar la mecánica,
+    el diseño, la restricción y las fechas de vigencia."""
+
+    template_name = "lealtad/promocion_form.html"
+
+    def get(self, request, pk):
+        promocion = get_object_or_404(Promocion, pk=pk, store=staff_store(request))
+        form = PromocionForm(instance=promocion, initial=PromocionForm.initial_de(promocion))
+        return render(request, self.template_name, {
+            "form": form, "estilos_fondo": ESTILOS_FONDO, "promocion": promocion,
+        })
+
+    def post(self, request, pk):
+        promocion = get_object_or_404(Promocion, pk=pk, store=staff_store(request))
+        form = PromocionForm(request.POST, request.FILES, instance=promocion)
+        if form.is_valid():
+            form.save(store=staff_store(request))
+            messages.success(request, "Promoción actualizada correctamente.")
+            return redirect("lealtad:promocion_list")
+        return render(request, self.template_name, {
+            "form": form, "estilos_fondo": ESTILOS_FONDO, "promocion": promocion,
+        })
 
 
 class PromocionActivarView(DuenoRequiredMixin, View):

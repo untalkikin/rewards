@@ -1,5 +1,12 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 import uuid
+
+
+def validar_tamano_imagen(archivo):
+    limite_mb = 5
+    if archivo.size > limite_mb * 1024 * 1024:
+        raise ValidationError(f"La imagen no puede pesar más de {limite_mb}MB.")
 
 
 class Store(models.Model):
@@ -18,6 +25,11 @@ class Store(models.Model):
     # --- Marca / branding (panel del Dueño) ---
     logo = models.ImageField(upload_to="negocio/logo/", blank=True, null=True)
     favicon = models.ImageField(upload_to="negocio/favicon/", blank=True, null=True)
+    login_banner = models.ImageField(
+        upload_to="negocio/login_banner/", blank=True, null=True,
+        validators=[validar_tamano_imagen],
+        help_text="Fondo de las pantallas de acceso de tus clientes (login/registro). Horizontal, máx. 5MB; se recorta para cubrir el espacio disponible.",
+    )
     color_primario = models.CharField(
         max_length=7, blank=True, default="#405189",
         help_text="Color hexadecimal, ej. #405189"

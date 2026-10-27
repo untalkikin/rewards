@@ -1,0 +1,81 @@
+{% extends "partials/base.html" %}
+{% block title %}Configuración del negocio{% endblock title %}
+
+{% block content %}
+        <div class="main-content">
+            <div class="page-content">
+                <div class="container-fluid">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8 col-lg-6">
+                            <div class="card mt-4">
+                                <div class="card-body p-4">
+                                    <h5 class="card-title mb-3">Configuración del negocio</h5>
+                                    <p class="text-muted small mb-4">
+                                        Esta marca se usa en tu panel y en las pantallas de acceso
+                                        de tus clientes (login y creación de tarjeta).
+                                    </p>
+
+                                    {% if form.non_field_errors %}
+                                    <div class="alert alert-danger">
+                                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <form method="post" enctype="multipart/form-data">
+                                        {% csrf_token %}
+
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.logo.id_for_label }}">{{ form.logo.label }}</label>
+                                            {% if form.instance.logo %}
+                                            <div class="mb-2"><img src="{{ form.instance.logo.url }}" alt="" height="40"></div>
+                                            {% endif %}
+                                            {{ form.logo }}
+                                            {% for error in form.logo.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.favicon.id_for_label }}">{{ form.favicon.label }}</label>
+                                            {% if form.instance.favicon %}
+                                            <div class="mb-2"><img src="{{ form.instance.favicon.url }}" alt="" height="24"></div>
+                                            {% endif %}
+                                            {{ form.favicon }}
+                                            {% for error in form.favicon.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                        </div>
+
+                                        <hr>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="{{ form.login_banner.id_for_label }}">Fondo de las pantallas de acceso</label>
+                                            <p class="text-muted small mb-2">Se muestra detrás del login y la creación de tarjeta de tus clientes. Horizontal, máx. 5MB.</p>
+                                            {% if form.instance.login_banner %}
+                                            <div class="mb-2">
+                                                <img src="{{ form.instance.login_banner.url }}" alt="" class="rounded" style="max-height: 120px; max-width: 100%; object-fit: cover;">
+                                            </div>
+                                            {% endif %}
+                                            {{ form.login_banner }}
+                                            {% for error in form.login_banner.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                        </div>
+
+                                        <hr>
+                                        <div class="row">
+                                            <div class="col-6 mb-3">
+                                                <label class="form-label" for="{{ form.color_primario.id_for_label }}">{{ form.color_primario.label }}</label>
+                                                {{ form.color_primario }}
+                                                {% for error in form.color_primario.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                            </div>
+                                            <div class="col-6 mb-3">
+                                                <label class="form-label" for="{{ form.color_secundario.id_for_label }}">{{ form.color_secundario.label }}</label>
+                                                {{ form.color_secundario }}
+                                                {% for error in form.color_secundario.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary w-100">Guardar cambios</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock content %}

@@ -19,7 +19,7 @@
 </head>
 <body>
     <div class="auth-page-wrapper pt-5">
-        <div class="auth-one-bg-position auth-one-bg" id="auth-particles">
+        <div class="auth-one-bg-position auth-one-bg" id="auth-particles"{% if negocio.login_banner %} style="background-image: url('{{ negocio.login_banner.url }}');"{% endif %}>
             <div class="bg-overlay"></div>
         </div>
 

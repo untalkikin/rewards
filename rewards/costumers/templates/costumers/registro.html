@@ -128,5 +128,21 @@
     <script src="{% static 'js/plugins.js'%}"></script>
     <script src="{% static 'libs/particles.js/particles.js'%}"></script>
     <script src="{% static 'js/pages/particles.app.js'%}"></script>
+
+    {{ store_banners|json_script:"store-banners-data" }}
+    <script>
+        (function () {
+            var bannerPorNegocio = JSON.parse(document.getElementById("store-banners-data").textContent);
+            var defaultBg = "{% static 'images/auth-one-bg.jpg' %}";
+            var fondo = document.getElementById("auth-particles");
+            var selectorNegocio = document.getElementById("{{ form.store.id_for_label }}");
+            if (selectorNegocio && fondo) {
+                selectorNegocio.addEventListener("change", function () {
+                    var url = bannerPorNegocio[this.value];
+                    fondo.style.backgroundImage = "url('" + (url || defaultBg) + "')";
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -60,14 +60,12 @@
                             </a>
                         </li>
                         {% endif %}
-                        {% if request.user.perfil.activo %}
+                        {% if request.user.perfil.rol == "DUENO" %}
                         <li class="nav-item">
                             <a href="{% url 'costumers:registrar' %}" class="nav-link menu-link">
                                 <i data-feather="user-plus" class="icon-dual"></i> <span>Registrar cliente</span>
                             </a>
                         </li>
-                        {% endif %}
-                        {% if request.user.perfil.rol == "DUENO" %}
                         <li class="nav-item"><a href="{% url 'billing:panel' %}" class="nav-link menu-link"><i data-feather="credit-card" class="icon-dual"></i><span>Suscripción y pagos</span></a></li>
                         <li class="nav-item">
                             <a href="{% url 'lealtad:promocion_list' %}" class="nav-link menu-link">
@@ -77,6 +75,11 @@
                         <li class="nav-item">
                             <a href="{% url 'core:reportes' %}" class="nav-link menu-link">
                                 <i data-feather="bar-chart-2" class="icon-dual"></i> <span>Reportes</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'stores:configuracion' %}" class="nav-link menu-link">
+                                <i data-feather="settings" class="icon-dual"></i> <span>Configuración del negocio</span>
                             </a>
                         </li>
                         {% endif %}
